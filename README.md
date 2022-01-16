@@ -9,6 +9,7 @@ live tape fx (saturation, distortion, wow/flutter).
 
 this norns engine combines the incredible plugins ported by Mads Kjeldgaard ([portedplugins](https://github.com/madskjeldgaard/portedplugins)) which are ported from [Jatin Chowdhury's ChowDSP-VCV-rack project](https://github.com/jatinchowdhury18/ChowDSP-VCV). it is a tape fx emulator - providing three stages of effects: tape saturation, tape distortion, and then wow/flutter.
 
+https://vimeo.com/666500841
 
 ## Requirements
 
