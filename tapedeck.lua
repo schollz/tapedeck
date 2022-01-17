@@ -1,4 +1,4 @@
--- tapedeck v0.1.0
+-- tapedeck v0.1.1
 -- tape emulator fx
 --
 -- llllllll.co/t/tapedeck
@@ -39,8 +39,8 @@ function init()
   local ps={
     {"tape_wet","wet",0},
     {"tape_bias","bias",50},
-    {"saturation","sat",50},
-    {"drive","drive",50},
+    {"saturation","sat",80},
+    {"drive","drive",80},
   }
   for _,p in ipairs(ps) do
     params:add_control(p[1],p[2],controlspec.new(0,100,'lin',1,p[3],"%",1/100))
@@ -72,7 +72,7 @@ function init()
   params:add_separator("wow / flutter")
   local ps={
     {"wowflu","wet",0},
-    {"wobble_amp","wobble",5},
+    {"wobble_amp","wobble",8},
     {"flutter_amp","flutter",3},
   }
   for _,p in ipairs(ps) do
