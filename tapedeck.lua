@@ -25,8 +25,10 @@ groups={
   {"wowflu","wobble_amp","flutter_amp"},
 }
 
+current_monitor_level=0
 function init()
-  audio.level_monitor(0)
+  current_monitor_level=params:get("monitor_level")
+  params:set("monitor_level",-99)
 
   params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.1/1))
   params:set_action("amp",function(x)
@@ -124,7 +126,7 @@ function init()
 end
 
 function cleanup()
-  audio.level_monitor(1)
+  params:set("monitor_level",current_monitor_level)
 end
 
 function ToRomanNumerals(s)
