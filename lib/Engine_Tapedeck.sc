@@ -23,9 +23,11 @@ Engine_Tapedeck : CroneEngine {
 			shelvingfreq=600,dist_oversample=2,
 			wowflu=1.0,
 			wobble_rpm=33, wobble_amp=0.05, flutter_amp=0.03, flutter_fixedfreq=6, flutter_variationfreq=2,
+			hpf=60,hpfqr=0.6,
+			lpf=18000,lpfqr=0.6,
 			buf;
             var snd;
-			var pw,pr,sndr,rate;
+			var pw,pr,sndr,rate,switch;
 			var wow = wobble_amp*SinOsc.kr(wobble_rpm/60,mul:0.1);
 			var flutter = flutter_amp*SinOsc.kr(flutter_fixedfreq+LFNoise2.kr(flutter_variationfreq),mul:0.02);
 			rate= 1 + (wowflu * (wow+flutter));		
@@ -36,18 +38,22 @@ Engine_Tapedeck : CroneEngine {
 			pr=DelayL.ar(Phasor.ar(0, BufRateScale.kr(buf)*rate, 0, BufFrames.kr(buf)),0.2,0.2);
 			BufWr.ar(snd,buf,pw);
 			sndr=BufRd.ar(2,buf,pr,interpolation:4);
-			snd=sndr;
+			switch=Lag.kr(wowflu>0,1);
+			snd=SelectX.ar(switch,[snd,sndr]);
 
 			snd=snd*amp;
+
             snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,tape_oversample,mode)]);
+
 			snd=SelectX.ar(Lag.kr(dist_wet/10,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,dist_oversample)]);			
 
-			snd=RHPF.ar(snd,60,0.6);
+			snd=RHPF.ar(snd,hpf,hpfqr);
+			snd=RLPF.ar(snd,lpf,lpfqr);
 
 			Out.ar(0,snd);
 		}.play(context.server,[\buf,buf]);
 
-		[\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
+		[\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
 			this.addCommand(key, "f", { arg msg;
 				synTape.set(key,msg[1]);
 			});
