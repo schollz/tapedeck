@@ -27,7 +27,7 @@ Engine_Tapedeck : CroneEngine {
 			lpf=18000,lpfqr=0.6,
 			buf;
             var snd;
-			var pw,pr,sndr,rate;
+			var pw,pr,sndr,rate,switch;
 			var wow = wobble_amp*SinOsc.kr(wobble_rpm/60,mul:0.1);
 			var flutter = flutter_amp*SinOsc.kr(flutter_fixedfreq+LFNoise2.kr(flutter_variationfreq),mul:0.02);
 			rate= 1 + (wowflu * (wow+flutter));		
@@ -38,7 +38,8 @@ Engine_Tapedeck : CroneEngine {
 			pr=DelayL.ar(Phasor.ar(0, BufRateScale.kr(buf)*rate, 0, BufFrames.kr(buf)),0.2,0.2);
 			BufWr.ar(snd,buf,pw);
 			sndr=BufRd.ar(2,buf,pr,interpolation:4);
-			snd=Select.ar(woflu>0,[snd,sndr]);
+			switch=Lag.kr(wowflu>0,1);
+			snd=SelectX.ar(switch,[snd,sndr]);
 
 			snd=snd*amp;
 
