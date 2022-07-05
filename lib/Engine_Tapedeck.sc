@@ -20,7 +20,7 @@ Engine_Tapedeck : CroneEngine {
 			arg amp=0.5,tape_wet=0,tape_bias=0.5,saturation=0.5,drive=0.5,
 			tape_oversample=2,mode=0,
 			dist_wet=0,drivegain=0.5,dist_bias=0,lowgain=0.1,highgain=0.1,
-			shelvingfreq=600,dist_oversample=1,
+			shelvingfreq=600,dist_oversample=2,
 			wowflu=1.0,
 			wobble_rpm=33, wobble_amp=0.05, flutter_amp=0.03, flutter_fixedfreq=6, flutter_variationfreq=2,
 			hpf=60,hpfqr=0.6,
@@ -34,12 +34,12 @@ Engine_Tapedeck : CroneEngine {
 			snd=SoundIn.ar([0,1]);
 			
 			// write to tape and read from
-			pw=Phasor.ar(0, BufRateScale.kr(buf), 0, BufFrames.kr(buf));
-			pr=DelayL.ar(Phasor.ar(0, BufRateScale.kr(buf)*rate, 0, BufFrames.kr(buf)),0.2,0.2);
-			BufWr.ar(snd,buf,pw);
-			sndr=BufRd.ar(2,buf,pr,interpolation:4);
-			switch=Lag.kr(wowflu>0,1);
-			snd=SelectX.ar(switch,[snd,sndr]);
+			//pw=Phasor.ar(0, BufRateScale.kr(buf), 0, BufFrames.kr(buf));
+			//pr=DelayL.ar(Phasor.ar(0, BufRateScale.kr(buf)*rate, 0, BufFrames.kr(buf)),0.2,0.2);
+			//BufWr.ar(snd,buf,pw);
+			//sndr=BufRd.ar(2,buf,pr,interpolation:4);
+			//switch=Lag.kr(wowflu>0,1);
+			//snd=SelectX.ar(switch,[snd,sndr]);
 			
 			snd=snd*amp;
 			
@@ -50,6 +50,9 @@ Engine_Tapedeck : CroneEngine {
 			snd=RHPF.ar(snd,hpf,hpfqr);
 			snd=RLPF.ar(snd,lpf,lpfqr);
 			
+			snd=MiClouds.ar(snd,pit:0,size:0.5,dens:0.7,drywet:0.8,in_gain:1,spread:0.8,rvb:0.9,fb:0.5);
+			//snd=Greyhole.ar(snd,delayTime:6,damp:0.2,size:2,feedback:0.85,modDepth:0.05,modFreq:2.0);
+
 			Out.ar(0,snd);
 		}.play(context.server,[\buf,buf]);
 		
