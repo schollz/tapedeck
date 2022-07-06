@@ -30,6 +30,12 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
+  params:add_control("clouds","clouds",controlspec.new(0.0,1,'lin',0.02,1.0,'',0.02/1))
+  params:set_action("clouds",function(x)
+    engine.clouds(x)
+  end)
+
+
   params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.1/1))
   params:set_action("amp",function(x)
     engine.amp(x)
@@ -116,6 +122,8 @@ function init()
   params:bang()
 
   msg("MIX "..ToRomanNumerals(math.random(1,12)),30)
+  
+  engine.damp(0.6); engine.delayTime(0.3); engine.gsize(1.2); engine.feedback(0.2); engine.modDepth(0.6); engine.modFreq(0.5);engine.size(0.7); engine.rvb(0.1); engine.grey(0.3); engine.clouds(0.0)
 
   clock.run(function()
     while true do

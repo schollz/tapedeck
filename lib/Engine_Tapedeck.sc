@@ -25,6 +25,9 @@ Engine_Tapedeck : CroneEngine {
 			wobble_rpm=33, wobble_amp=0.05, flutter_amp=0.03, flutter_fixedfreq=6, flutter_variationfreq=2,
 			hpf=60,hpfqr=0.6,
 			lpf=18000,lpfqr=0.6,
+			size=0.5,dens=0.7,drywet=0.8,spread=0.8,rvb=0.9,fb=0.5,
+			delayTime=2,damp=0.2,gsize=1.5,feedback=0.85,modDepth=0.1,modFreq=2.0,
+			grey=0,clouds=0,
 			buf;
 			var snd;
 			var pw,pr,sndr,rate,switch;
@@ -50,13 +53,13 @@ Engine_Tapedeck : CroneEngine {
 			snd=RHPF.ar(snd,hpf,hpfqr);
 			snd=RLPF.ar(snd,lpf,lpfqr);
 			
-			snd=MiClouds.ar(snd,pit:0,size:0.5,dens:0.7,drywet:0.8,in_gain:1,spread:0.8,rvb:0.9,fb:0.5);
-			//snd=Greyhole.ar(snd,delayTime:6,damp:0.2,size:2,feedback:0.85,modDepth:0.05,modFreq:2.0);
+			snd=SelectX.ar(clouds,[snd,MiClouds.ar(snd,pit:0,size:size,dens:dens,drywet:drywet,in_gain:1,spread:spread,rvb:rvb,fb:fb)]);
+			snd=SelectX.ar(grey,[snd,Greyhole.ar(snd,delayTime:delayTime,damp:damp,size:gsize,feedback:feedback,modDepth:modDepth,modFreq:modFreq)]);
 
 			Out.ar(0,snd);
 		}.play(context.server,[\buf,buf]);
 		
-		[\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
+		[\grey,\clouds,\delayTime,\damp,\gsize,\feedback,\modDepth,\modFreq,\size,\dens,\drywet,\spread,\rvb,\fb,\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
 			this.addCommand(key, "f", { arg msg;
 				synTape.set(key,msg[1]);
 			});
