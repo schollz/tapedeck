@@ -61,6 +61,10 @@ function init()
   params:set_action("sine_drive",function(x)
     engine.sine_drive(x)
   end)
+  params:add_control("tascam","tascam",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
+  params:set_action("tascam",function(x)
+    engine.tascam(x)
+  end)
   params:add_separator("tape")
   local ps={
     {"tape_wet","wet",0,100},
