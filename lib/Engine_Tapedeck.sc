@@ -9,6 +9,15 @@ Engine_Tapedeck : CroneEngine {
 	
 	
 	alloc {
+        var mips=0.0;
+        var piped = Pipe.new("lscpu | grep BogoMIPS | awk '{print $2}'", "r"); 
+        var oversample=2;
+        mips = piped.getLine.asFloat;
+        piped.close;
+        ["BogoMIPS: ",mips].postln;
+        if (mips>200,{
+            oversample=3;
+        });
 		
 		buf=Buffer.alloc(context.server,48000*180,2);
 		
@@ -43,9 +52,9 @@ Engine_Tapedeck : CroneEngine {
 			
 			snd=snd*amp;
 			
-			snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,tape_oversample,mode)]);
+			snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,oversample,mode)]);
 			
-			snd=SelectX.ar(Lag.kr(dist_wet/10,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,dist_oversample)]);			
+			snd=SelectX.ar(Lag.kr(dist_wet/5,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,oversample-1)]);			
 			
 			snd=RHPF.ar(snd,hpf,hpfqr);
 			snd=RLPF.ar(snd,lpf,lpfqr);

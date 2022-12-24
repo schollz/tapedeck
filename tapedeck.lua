@@ -1,4 +1,4 @@
--- tapedeck v0.1.1
+-- tapedeck v1.0.0
 -- tape emulator fx
 --
 -- llllllll.co/t/tapedeck
@@ -10,8 +10,6 @@
 -- K2/K3 toggles stages
 -- E1/E2/E3 changes parameters
 --
-
-engine.name="Tapedeck"
 
 counter=0
 tape_spin=0
@@ -26,7 +24,31 @@ groups={
 }
 
 current_monitor_level=0
+UI=require 'ui'
+loaded_files=0
+Needs_Restart=false
+Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogTape_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
+engine.name=Engine_Exists and 'Tapedeck' or nil
+
 function init()
+  Needs_Restart=false
+  if not Engine_Exists then
+    clock.run(function()
+      if not Engine_Exists then
+        Needs_Restart=true
+        Restart_Message=UI.Message.new{"installing tapedeck..."}
+        redraw()
+        clock.sleep(1)
+        os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
+      end
+      Restart_Message=UI.Message.new{"please restart norns."}
+      redraw()
+      clock.sleep(1)
+      do return end
+    end)
+    do return end
+  end
+
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
@@ -37,13 +59,13 @@ function init()
   end)
   params:add_separator("tape")
   local ps={
-    {"tape_wet","wet",0},
-    {"tape_bias","bias",50},
-    {"saturation","sat",80},
-    {"drive","drive",80},
+    {"tape_wet","wet",0,100},
+    {"tape_bias","bias",50,100},
+    {"saturation","sat",80,200},
+    {"drive","drive",80,200},
   }
   for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,100,'lin',1,p[3],"%",1/100))
+    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',1,p[3],"%",1/p[4]))
     params:set_action(p[1],function(x)
       engine[p[1]](x/100)
       msg(p[2].."="..math.floor(x).."%")
@@ -51,14 +73,14 @@ function init()
   end
   params:add_separator("distortion")
   local ps={
-    {"dist_wet","wet",0},
-    {"drivegain","drive",10},
-    {"dist_bias","bias",0},
-    {"lowgain","low",10},
-    {"highgain","high",10},
+    {"dist_wet","wet",0,100},
+    {"drivegain","drive",21,100},
+    {"dist_bias","bias",22,250},
+    {"lowgain","low",5,30,0.1},
+    {"highgain","high",5,30,0.1},
   }
   for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,100,'lin',1,p[3],"%",1/100))
+    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',p[5] or 1,p[3],"%",(p[5] or 1)/p[4]))
     params:set_action(p[1],function(x)
       engine[p[1]](x/100)
       msg(p[2].."="..math.floor(x).."%")
@@ -210,6 +232,13 @@ function circle(x,y,r,l)
 end
 
 function redraw()
+  if Needs_Restart then
+    screen.clear()
+    screen.level(15)
+    Restart_Message:redraw()
+    screen.update()
+    return
+  end
   screen.clear()
   screen.aa(1)
   counter=counter+1
