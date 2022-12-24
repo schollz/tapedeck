@@ -76,11 +76,11 @@ function init()
     {"dist_wet","wet",0,100},
     {"drivegain","drive",21,100},
     {"dist_bias","bias",22,250},
-    {"lowgain","low",5,30},
-    {"highgain","high",5,30},
+    {"lowgain","low",5,30,0.1},
+    {"highgain","high",5,30,0.1},
   }
   for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',1,p[3],"%",1/p[4]))
+    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',p[5] or 1,p[3],"%",(p[5] or 1)/p[4]))
     params:set_action(p[1],function(x)
       engine[p[1]](x/100)
       msg(p[2].."="..math.floor(x).."%")
