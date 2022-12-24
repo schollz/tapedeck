@@ -2,6 +2,7 @@ Engine_Tapedeck : CroneEngine {
 	
 	var synTape;
 	var buf;
+	var bufSine;
 	
 	*new { arg context, doneCallback;
 		^super.new(context, doneCallback);
@@ -20,14 +21,15 @@ Engine_Tapedeck : CroneEngine {
         });
 		
 		buf=Buffer.alloc(context.server,48000*180,2);
-		
+		bufSine=Buffer.alloc(context.server,512,1);
+        bufSine.sine2([2],[0.5],false);
 		context.server.sync;
 		
 		// wow and flutter from Stefaan Himpe https://sccode.org/1-5bP
 		
 		synTape={
 			arg amp=0.5,tape_wet=0,tape_bias=0.5,saturation=0.5,drive=0.5,
-			tape_oversample=2,mode=0,
+			tape_oversample=2,mode=0,sine_drive=0,sine_buf=0,
 			dist_wet=0,drivegain=0.5,dist_bias=0,lowgain=0.1,highgain=0.1,
 			shelvingfreq=600,dist_oversample=1,
 			wowflu=1.0,
@@ -51,6 +53,8 @@ Engine_Tapedeck : CroneEngine {
 			snd=SelectX.ar(switch,[snd,sndr]);
 			
 			snd=snd*amp;
+
+			snd=SelectX.ar(Lag.kr(sine_drive),[snd,Shaper.ar(sine_buf,snd)]);
 			
 			snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,oversample,mode)]);
 			
@@ -60,9 +64,9 @@ Engine_Tapedeck : CroneEngine {
 			snd=RLPF.ar(snd,lpf,lpfqr);
 			
 			Out.ar(0,snd);
-		}.play(context.server,[\buf,buf]);
+		}.play(context.server,[\buf,buf,\sine_buf,bufSine]);
 		
-		[\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
+		[\sine_drive,\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
 			this.addCommand(key, "f", { arg msg;
 				synTape.set(key,msg[1]);
 			});
@@ -72,6 +76,7 @@ Engine_Tapedeck : CroneEngine {
 	free {
 		synTape.free;
 		buf.free;
+		bufSine.free;
 	}
 	
 }
