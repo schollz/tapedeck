@@ -42,19 +42,9 @@ _note 3:_ the "wow / flutter" (stage 3), when activated (i.e. non-zero) will act
 
 ## Install
 
-**the install process requires 3 steps to properly install!**
-
-1. open maiden and below the "matron" tab, enter:
-
+the tapedeck engine will automatically installed the first time you run.
 
 ```
 ;install https://github.com/schollz/tapedeck
 ```
 
-2. in the same "matron" tab install the plugins with this command:
-
-```lua
-os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
-```
-
-3. restart your norns.
