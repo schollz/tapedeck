@@ -74,10 +74,10 @@ function init()
   params:add_separator("distortion")
   local ps={
     {"dist_wet","wet",0,100},
-    {"drivegain","drive",10,100},
-    {"dist_bias","bias",0,250},
-    {"lowgain","low",10,30},
-    {"highgain","high",10,30},
+    {"drivegain","drive",21,100},
+    {"dist_bias","bias",22,250},
+    {"lowgain","low",5,30},
+    {"highgain","high",5,30},
   }
   for _,p in ipairs(ps) do
     params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',1,p[3],"%",1/p[4]))

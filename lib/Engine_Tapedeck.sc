@@ -54,7 +54,7 @@ Engine_Tapedeck : CroneEngine {
 			
 			snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,oversample,mode)]);
 			
-			snd=SelectX.ar(Lag.kr(dist_wet/10,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,oversample)]);			
+			snd=SelectX.ar(Lag.kr(dist_wet/5,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,oversample)]);			
 			
 			snd=RHPF.ar(snd,hpf,hpfqr);
 			snd=RLPF.ar(snd,lpf,lpfqr);
