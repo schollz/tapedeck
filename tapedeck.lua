@@ -52,19 +52,19 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
-  params:add_control("amp","preamp",controlspec.new(0,4,'lin',0.01/1,1,'',0.01/4))
-  params:set_action("amp",function(x)
-    engine.amp(x)
-    msg("amp="..(math.floor(x*10)/10))
+  params:add_control("preamp","preamp",controlspec.new(0,4,'lin',0.1/1,1,'',0.1/4))
+  params:set_action("preamp",function(x)
+    engine.preamp(x)
   end)
-  params:add_control("sine_drive","sinoid drive",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
-  params:set_action("sine_drive",function(x)
-    engine.sine_drive(x)
+  params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.01/1))
+  params:set_action("amp",function(x)
+    engine.preamp(x)
   end)
   params:add_control("tascam","tascam",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
   params:set_action("tascam",function(x)
     engine.tascam(x)
   end)
+
   params:add_separator("tape")
   local ps={
     {"tape_wet","wet",0,100},
@@ -79,7 +79,7 @@ function init()
       msg(p[2].."="..math.floor(x).."%")
     end)
   end
-  params:add_separator("distortion")
+  params:add_separator("tape distortion")
   local ps={
     {"dist_wet","wet",0,100},
     {"drivegain","drive",21,100},
@@ -124,6 +124,27 @@ function init()
   params:set_action("flutter_variationfreq",function(x)
     engine.flutter_variationfreq(x)
   end)
+
+  params:add_separator("tape saturation")
+  local params_menu={
+    {id="sine_drive",name="saturate",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {id="compress_curve_wet",name="compress curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {id="compress_curve_drive",name="compress curve drive",min=0,max=10,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {id="expand_curve_wet",name="expand curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {id="expand_curve_drive",name="expand curve drive",min=0,max=10,exp=false,div=0.1,default=4,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+  }
+  for _,pram in ipairs(params_menu) do
+    params:add{
+      type="control",
+      id=pram.id,
+      name=pram.name,
+      controlspec=controlspec.new(pram.min,pram.max,pram.exp and "exp" or "lin",pram.div,pram.default,pram.unit or "",pram.div/(pram.max-pram.min)),
+      formatter=pram.formatter,
+    }
+    params:set_action(pram.id,function(v)
+      engine[pram.id](pram.fn~=nil and pram.fn(v) or v)
+    end)
+  end
 
   params:add_separator("filters")
   params:add_control("lpf","low-pass filter",controlspec.new(100,20000,'exp',100,18000,'Hz',100/18000))
