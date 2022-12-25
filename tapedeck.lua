@@ -52,13 +52,13 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
-  params:add_control("preamp","preamp",controlspec.new(0,4,'lin',0.1/1,1,'',0.1/4))
+  params:add_control("preamp","preamp",controlspec.new(0,10,'lin',0.1,1,'',0.1/10))
   params:set_action("preamp",function(x)
     engine.preamp(x)
   end)
   params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.01/1))
   params:set_action("amp",function(x)
-    engine.preamp(x)
+    engine.amp(x)
   end)
   params:add_control("tascam","tascam",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
   params:set_action("tascam",function(x)
@@ -129,7 +129,7 @@ function init()
   local params_menu={
     {id="sine_drive",name="saturate",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
     {id="compress_curve_wet",name="compress curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="compress_curve_drive",name="compress curve drive",min=0,max=10,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {id="compress_curve_drive",name="compress curve drive",min=0,max=10,exp=false,div=0.01,default=0.25,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
     {id="expand_curve_wet",name="expand curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
     {id="expand_curve_drive",name="expand curve drive",min=0,max=10,exp=false,div=0.1,default=4,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
   }

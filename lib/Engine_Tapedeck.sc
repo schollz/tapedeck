@@ -70,7 +70,7 @@ Engine_Tapedeck : CroneEngine {
 			sndr=BufRd.ar(2,buf,pr,interpolation:4);
 			switch=Lag.kr(wowflu>0,1);
 			snd=SelectX.ar(switch,[snd,sndr]);
-			
+
 			snd=snd*preamp;
 
 			snd=SelectX.ar(Lag.kr(sine_drive),[snd,Shaper.ar(sine_buf,snd)]);
