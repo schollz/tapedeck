@@ -125,7 +125,7 @@ function init()
     engine.flutter_variationfreq(x)
   end)
 
-  params:add_separator("tape saturation")
+  params:add_separator("tape compression")
   local params_menu={
     {id="sine_drive",name="saturate",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
     {id="compress_curve_wet",name="compress curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},

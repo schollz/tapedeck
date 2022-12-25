@@ -5,12 +5,13 @@ live tape fx (saturation, distortion, wow/flutter).
 
 ![moonraker](https://user-images.githubusercontent.com/6550035/149668537-202958bc-c680-4880-a8a2-d104cc9e15dd.png)
 
-this is a tape deck emulator - providing four stages of effects: 
+this is a tape deck emulator - providing five stages of effects: 
 
-1) tape bias/saturation
+1) tape drive
 2) tape distortion
 3) wow / flutter 
-4) low-pass / high-pass filtering
+4) tape compression
+5) low-pass / high-pass filtering
 
 this script is built off the shoulders of many extraordinary feats of ingenuity - this norns engine combines the incredible plugins ported by Mads Kjeldgaard (@madskjeldgaard) ([portedplugins](https://github.com/madskjeldgaard/portedplugins)) which are ported from [Jatin Chowdhury's ChowDSP-VCV-rack project](https://github.com/jatinchowdhury18/ChowDSP-VCV). the key here is Jatin Chowdhury's [open-source code for physical modeling of tape machines](https://github.com/jatinchowdhury18/AnalogTapeModel), which is beautifully detailed [in this paper](dafx2019.bcu.ac.uk/papers/DAFx2019_paper_3.pdf).
 
