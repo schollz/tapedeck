@@ -1,4 +1,4 @@
--- tapedeck v1.0.0
+-- tapedeck v2.0.0
 -- tape emulator fx
 --
 -- llllllll.co/t/tapedeck
@@ -27,7 +27,7 @@ current_monitor_level=0
 UI=require 'ui'
 loaded_files=0
 Needs_Restart=false
-Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogTape_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
+Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogDegrade_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
 engine.name=Engine_Exists and 'Tapedeck' or nil
 
 function init()
@@ -39,6 +39,7 @@ function init()
         Restart_Message=UI.Message.new{"installing tapedeck..."}
         redraw()
         clock.sleep(1)
+        -- TODO: update this URL
         os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
       end
       Restart_Message=UI.Message.new{"please restart norns."}
@@ -52,117 +53,71 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
-  params:add_control("preamp","preamp",controlspec.new(0,10,'lin',0.1,1,'',0.1/10))
-  params:set_action("preamp",function(x)
-    engine.preamp(x)
-  end)
-  params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.01/1))
-  params:set_action("amp",function(x)
-    engine.amp(x)
-  end)
-  params:add_control("tascam","tascam",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
-  params:set_action("tascam",function(x)
-    engine.tascam(x)
-  end)
 
-  params:add_separator("tape")
-  local ps={
-    {"tape_wet","wet",0,100},
-    {"tape_bias","bias",50,100},
-    {"saturation","sat",80,200},
-    {"drive","drive",80,200},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',1,p[3],"%",1/p[4]))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_separator("tape distortion")
-  local ps={
-    {"dist_wet","wet",0,100},
-    {"drivegain","drive",21,100},
-    {"dist_bias","bias",22,250},
-    {"lowgain","low",5,30,0.1},
-    {"highgain","high",5,30,0.1},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',p[5] or 1,p[3],"%",(p[5] or 1)/p[4]))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_control("shelvingfreq","shelving freq",controlspec.new(20,16000,'exp',10,600,'Hz',10/16000))
-  params:set_action("shelvingfreq",function(x)
-    engine.shelvingfreq(x)
-  end)
-
-  params:add_separator("wow / flutter")
-  local ps={
-    {"wowflu","wet",0},
-    {"wobble_amp","wobble",8},
-    {"flutter_amp","flutter",3},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,100,'lin',1,p[3],"%",1/100))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_control("wobble_rpm","wobble rpm",controlspec.new(1,66,'lin',1,33,'rpm',1/66))
-  params:set_action("wobble_rpm",function(x)
-    engine.wobble_rpm(x)
-  end)
-  params:add_control("flutter_fixedfreq","flutter freq",controlspec.new(0.1,10,'lin',0.1,6,'Hz',0.1/10))
-  params:set_action("flutter_fixedfreq",function(x)
-    engine.flutter_fixedfreq(x)
-  end)
-  params:add_control("flutter_variationfreq","flutter var freq",controlspec.new(0.1,10,'lin',0.1,2,'Hz',0.1/10))
-  params:set_action("flutter_variationfreq",function(x)
-    engine.flutter_variationfreq(x)
-  end)
-
-  params:add_separator("tape compression")
   local params_menu={
-    {id="sine_drive",name="saturate",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="compress_curve_wet",name="compress curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="compress_curve_drive",name="compress curve drive",min=0,max=10,exp=false,div=0.01,default=0.25,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="expand_curve_wet",name="expand curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="expand_curve_drive",name="expand curve drive",min=0,max=10,exp=false,div=0.1,default=4,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,unit="db"},
+    {stage=1,id="toggle",name="filters",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=1,id="lpf",name="lpf",min=10,max=135,exp=false,div=0.5,default=135,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return musicutil.note_num_to_name(math.floor(param:get()),true)end},
+    -- {id="punch",name="punch",min=0,max=1,exp=false,div=0.01,default=0,unit="punches"},
+    -- {id="amen",name="amen",min=0,max=1,exp=false,div=0.01,default=0,unit="amens"},
+    -- {id="break",name="break",min=0,max=1,exp=false,div=0.01,default=0,unit="break"},
+    -- {id="efit",name="efit",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="tighter",name="tighter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="track",name="sample",min=1,max=#amen_files,exp=false,div=1,default=1,formatter=function(param) return math.floor(param:get()) end},
+    -- {id="track2",name="sample2",min=0,max=#amen_files,exp=false,div=1,default=0,formatter=function(param) return param:get()==0 and "none" or math.floor(param:get()) end},
+    -- {id="probability",name="probability",hide=true,min=0,max=100,exp=false,div=1,default=100,unit="%"},
+    -- {id="pan",name="pan",min=-1,max=1,exp=false,div=0.01,default=0},
+    -- {id="lpf",name="lpf",min=20,max=135,exp=false,div=0.5,default=135,formatter=function(param) return musicutil.note_num_to_name(math.floor(param:get()),true)end},
+    -- {id="res",name="res",min=0.01,max=1,exp=false,div=0.01,default=0.71},
+    -- {id="hpf",name="hpf",min=12,max=120,exp=false,div=0.5,default=6,formatter=function(param) return musicutil.note_num_to_name(math.floor(param:get()),true)end},
+    -- {id="gate",name="gate",min=0.1,max=1,exp=false,div=0.01,default=1.0,response=1,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    -- {id="attack",name="attack",min=0,max=400,exp=false,div=1,default=5,unit="ms"},
+    -- {id="release",name="release",min=0,max=400,exp=false,div=1,default=15,unit="ms"},
+    -- {id="hold",name="hold",min=0,max=128,exp=false,div=1,default=0,unit="pulses"},
+    -- {id="decimate",name="decimate",min=0,max=0.8,exp=false,div=0.01,default=0.0,response=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- {id="drive",name="drive",min=0,max=0.75,exp=false,div=0.01,default=0.0,response=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- {id="compression",name="compression",min=0,max=0.4,exp=false,div=0.01,default=0.0,response=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- {id="pitch",name="note",min=-24,max=24,exp=false,div=0.1,default=0.0,response=1,formatter=function(param) return string.format("%s%2.1f",param:get()>-0.01 and "+" or "",param:get()) end},
+    -- {id="rate",name="rate",min=-2,max=2,exp=false,div=0.01,default=1.0,response=1,formatter=function(param) return string.format("%s%2.1f",param:get()>-0.01 and "+" or "",param:get()*100) end},
+    -- {id="rotate",name="rotate",hide=true,min=-127,max=127,exp=false,div=1,default=0.0,response=1,formatter=function(param) return string.format("%s%2.0f",param:get()>-0.01 and "+" or "",param:get()) end},
+    -- {id="stretch",name="stretch",min=0,max=1,exp=false,div=1,default=0.0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="compressing",name="compressing",min=0,max=1,exp=false,div=1,default=0.0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="compressible",name="compressible",min=0,max=1,exp=false,div=1,default=1,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="send_reverb",name="reverb send",min=0,max=1,hide=true,exp=false,div=0.01,default=0.0,response=1,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    -- {id="send_delay",name="delay send",min=0,max=1,exp=false,hide=true,div=0.01,default=0.0,response=1,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    -- {id="allowstretch",name="allow stretch",min=0,max=1,exp=false,div=1,default=1,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    -- {id="resetevery",name="reset every",min=0,max=64,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==0 and "off" or string.format("%d beats",param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
+    local id=pram.id..pram.stage
     params:add{
       type="control",
-      id=pram.id,
+      id=id,
       name=pram.name,
       controlspec=controlspec.new(pram.min,pram.max,pram.exp and "exp" or "lin",pram.div,pram.default,pram.unit or "",pram.div/(pram.max-pram.min)),
       formatter=pram.formatter,
     }
-    params:set_action(pram.id,function(v)
-      engine[pram.id](pram.fn~=nil and pram.fn(v) or v)
+    params:set_action(id,function(x)
+      if pram.id=="toggle" then 
+        engine.toggle(pram.stage,x)
+        -- update the hiding/showing in the menu
+        for stage=0,9 do 
+          for _,p in ipairs(params_menu) do 
+            if p.stage==stage then 
+              if params:get("toggle"..p.stage)>0 then 
+                params:hide(p.id..p.stage)
+              else
+                params:show(p.id..p.stage)
+              end
+            end
+          end
+        end
+        -- TODO: reload menu
+      else
+        engine.set(pram.stage,pram.id,pram.val and pram.val(x) or x)
+      end
     end)
   end
-
-  params:add_separator("filters")
-  params:add_control("lpf","low-pass filter",controlspec.new(100,20000,'exp',100,18000,'Hz',100/18000))
-  params:set_action("lpf",function(x)
-    engine.lpf(x)
-  end)
-  params:add_control("lpfqr","low-pass qr",controlspec.new(0.02,1,'lin',0.02,0.7,'',0.02/1))
-  params:set_action("lpfqr",function(x)
-    engine.hpfqr(x)
-  end)
-  params:add_control("hpf","high-pass filter",controlspec.new(10,20000,'exp',10,60,'Hz',10/18000))
-  params:set_action("hpf",function(x)
-    engine.hpf(x)
-  end)
-  params:add_control("hpfqr","high-pass qr",controlspec.new(0.02,1,'lin',0.02,0.7,'',0.02/1))
-  params:set_action("hpfqr",function(x)
-    engine.hpfqr(x)
-  end)
 
   params:bang()
 

@@ -72,7 +72,7 @@ Engine_Tapedeck : CroneEngine {
 			arg in,out;
 			var snd=SoundIn.ar([0,1]);
 
-			snd=snd*\preamp.kr(1);
+			snd=snd*\preamp.kr(1).dbamp;
 
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
