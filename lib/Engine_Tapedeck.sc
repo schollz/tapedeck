@@ -48,12 +48,12 @@ Engine_Tapedeck : CroneEngine {
         bufs.put("expand",Buffer.loadCollection(context.server,Signal.newFrom(expandCurve).asWavetableNoWrap));
         context.server.sync;
 		
-		// preamp -> filters -> tone -> tape -> distortion ->
+		// preamp -> filters -> color -> tape -> distortion ->
 		// chew -> degrade -> wow/flutter -> loss -> outgain
 		stageNames = [
 			"preamp",		// 0
 			"filters",		// 1
-			"tone",			// 2
+			"color",		// 2
 			"tape",			// 3
 			"distortion",	// 4
 			"wobble",		// 5
@@ -104,7 +104,7 @@ Engine_Tapedeck : CroneEngine {
 		}).send(context.server);
 
 
-		SynthDef("tone", {
+		SynthDef("color", {
 			arg in,out,bufSine,bufCompress,bufExpand;
 			var snd=In.ar(in,2);
 
