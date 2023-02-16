@@ -1,12 +1,12 @@
 Engine_Tapedeck : CroneEngine {
 	
-	var synTape;
-	var buf;
 	var bufs;
 	var bus;
-	var syns;
 	var bufSine;
-	
+	var syns;
+	var params;
+	var stageNames;
+
 	*new { arg context, doneCallback;
 		^super.new(context, doneCallback);
 	}
@@ -36,35 +36,49 @@ Engine_Tapedeck : CroneEngine {
         });
         context.server.sync;
 
-		buf=Buffer.alloc(context.server,48000*180,2);
+		bufs.put("wobble",Buffer.alloc(context.server,48000*180,2));
 		bufSine=Buffer.alloc(context.server,1024*16,1);
         bufSine.sine2([2],[0.5],false);
 		context.server.sync;
 		syns = Dictionary.new();
         bufs = Dictionary.new();
         bus = Dictionary.new();
+		params = Dictionary.new();
         bufs.put("compress",Buffer.loadCollection(context.server,Signal.newFrom(compressCurve).asWavetableNoWrap));
         bufs.put("expand",Buffer.loadCollection(context.server,Signal.newFrom(expandCurve).asWavetableNoWrap));
         context.server.sync;
 		
-		// preamp -> filters -> color -> tape -> distortion ->
+		// preamp -> filters -> tone -> tape -> distortion ->
 		// chew -> degrade -> wow/flutter -> loss -> outgain
+		stageNames = [
+			"preamp",		// 0
+			"filters",		// 1
+			"tone",			// 2
+			"tape",			// 3
+			"distortion",	// 4
+			"wobble",		// 5
+			"chew",			// 6
+			"loss",			// 7
+			"degrade",		// 8
+			"final"			// 9
+		];
 
-		SynthDef(\passthrough, {
+		SynthDef("passthrough", {
 			arg in,out;
 			Out.ar(out,In.ar(in,2));
 		}).send(context.server);
 
-		SynthDef(\in_gain, {
+		SynthDef("preamp", {
 			arg in,out;
 			var snd=SoundIn.ar([0,1]);
 
 			snd=snd*\preamp.kr(1);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\filters, {
+		SynthDef("filters", {
 			arg in,out,tascam=0;
 			var tascam_snd;
 			var snd=In.ar(in,2);
@@ -85,11 +99,12 @@ Engine_Tapedeck : CroneEngine {
 			tascam_snd=BLowPass.ar(tascam_snd,10000);
 			snd = (tascam*tascam_snd)+((1-tascam)*snd);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
 
-		SynthDef(\tone, {
+		SynthDef("tone", {
 			arg in,out,bufSine,bufCompress,bufExpand;
 			var snd=In.ar(in,2);
 
@@ -102,29 +117,32 @@ Engine_Tapedeck : CroneEngine {
             // expand curve
             snd=SelectX.ar(Lag.kr(\expand_curve_wet.kr(0)),[snd,Shaper.ar(bufExpand,snd*\expand_curve_drive.kr(1))]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\tape,{
+		SynthDef("tape",{
 			arg in,out;
 			var snd=In.ar(in,2);
 
 			snd=SelectX.ar(Lag.kr(\tape_wet.kr(0),1),[snd,AnalogTape.ar(snd,\tape_bias.kr(0),\saturation.kr(0),\drive.kr(0),oversample,0)]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 		
-		SynthDef(\distortion,{
+		SynthDef("distortion",{
 			arg in,out;
 			var snd=In.ar(in,2);
 
 			snd=SelectX.ar(Lag.kr(\dist_wet.kr(0)/5,1),[snd,AnalogVintageDistortion.ar(snd,
 				\drivegain.kr(0),\dist_bias.kr(0),\lowgain.kr(0),\highgain.kr(0),\shelvingfreq.kr(0),oversample-1)]);			
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\wobble,{
+		SynthDef("wobble",{
 			arg in,out,buf,
 			wowflu=1.0,
 			wobble_rpm=33, wobble_amp=0.05, flutter_amp=0.03, flutter_fixedfreq=6, flutter_variationfreq=2;
@@ -143,10 +161,11 @@ Engine_Tapedeck : CroneEngine {
 			switch_wobble=Lag.kr(wowflu>0,1);
 			snd=SelectX.ar(\wet.kr(0),[snd,sndr]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\chew, {
+		SynthDef("chew", {
 			arg in,out;
 			var snd;
 
@@ -155,10 +174,11 @@ Engine_Tapedeck : CroneEngine {
 				AnalogChew.ar(snd,\depth.kr(0.5),\freq.kr(0.5),\variance.kr(0.5)),
 			]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\loss, {
+		SynthDef("loss", {
 			arg in,out;
 			var snd;
 
@@ -167,10 +187,11 @@ Engine_Tapedeck : CroneEngine {
 				AnalogLoss.ar(snd,\gap.kr(0.5),\thick.kr(0.5),\space.kr(0.5),\speed.kr(1))
 			]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\degrade, {
+		SynthDef("degrade", {
 			arg in,out;
 			var snd;
 
@@ -179,10 +200,11 @@ Engine_Tapedeck : CroneEngine {
 				AnalogDegrade.ar(snd,\depth.kr(0.5),\amount.kr(0.5),\variance.kr(0.5),\envelope.kr(0.5))
 			]);
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);
 
-		SynthDef(\final, {
+		SynthDef("final", {
 			arg in,out;
 			
             // reduce stereo spread in the bass
@@ -190,6 +212,7 @@ Engine_Tapedeck : CroneEngine {
             
             snd = snd.tanh; // limit
 
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(0,snd*\amp.kr(1));
 		}).send(context.server);
 
@@ -197,6 +220,7 @@ Engine_Tapedeck : CroneEngine {
 		// setup the buses 
 		context.server.sync;
 		stages.do({arg i;
+			params.put(i,Dictionary.new());
 			bus.put(i,Bus.audio(context.server,2));
 		});
 		context.server.sync;
@@ -213,10 +237,37 @@ Engine_Tapedeck : CroneEngine {
 
 		synTape=Synth.new(\main,[\bufExpand,bufs.at("expand"),\bufCompress,bufs.at("compress"),\buf,buf,\sine_buf,bufSine]);
 		
-		[\preamp,\compress_curve_wet,\compress_curve_drive,\expand_curve_wet,\expand_curve_drive,\tascam,\sine_drive,\hpf,\hpfqr,\lpf,\lpfqr,\wowflu,\wobble_rpm,\wobble_amp,\flutter_amp,\flutter_fixedfreq,\flutter_variationfreq,\amp,\tape_wet,\tape_bias,\saturation,\drive,\tape_oversample,\mode,\dist_wet,\drivegain,\dist_bias,\lowgain,\highgain,\shelvingfreq,\dist_oversample].do({ arg key;
-			this.addCommand(key, "f", { arg msg;
-				synTape.set(key,msg[1]);
+		this.addCommand("toggle","ii",{ arg msg;
+			var stage=msg[1];
+			var on=msg[2]>0;
+			if (stage>0,{
+				var synthName="passthrough";
+				var args=[\in,bus.at(stage-1),\out,bus.at(stage)];
+				if (on,{
+					synthName=stageNames[stage];
+					params.at(stage).keysValuesDo({
+						arg key,val;
+						args=args.addAll(key.asSymbol,val);
+					});
+					switch(synthName.asString,
+						"wobble",{ args=args.addAll(\buf,\bufs.at("wobble")); }
+						// TODO add all the others here too
+					);
+				});
+				syns.at(stage).set(\mainenv,0);
+				syns.put(stage,Synth.after(syns.at(stage-1),synthName,args));
 			});
+		});	
+
+		this.addCommand("set","isf",{ arg msg;
+			var stage=msg[1];
+			var param=msg[2];
+			var value=msg[3];
+			if (params.at(stage).isNil,{
+				params.put(stage,Dictionary.new());
+			});
+			params.at(stage).put(param,value);
+			syns.at(stage).set(param,value);
 		});
 	}
 	
@@ -227,8 +278,9 @@ Engine_Tapedeck : CroneEngine {
         syns.keysValuesDo({ arg key, val;
             val.free;
         });
-		buf.free;
-		bufSine.free;
+        bus.keysValuesDo({ arg key, val;
+            val.free;
+        });
 	}
 	
 }
