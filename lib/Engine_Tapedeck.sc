@@ -74,8 +74,8 @@ Engine_Tapedeck : CroneEngine {
 		
 		SynthDef("preamp", {
 			arg in,out;
-			// var snd=SoundIn.ar([0,1]);
-			var snd=SinOsc.ar([440,442])*0.05;
+			var snd=SoundIn.ar([0,1]);
+			// var snd=SinOsc.ar([440,442])*0.05;
 			
 			snd=snd*\preamp.kr(1).dbamp;
 			
@@ -150,11 +150,13 @@ Engine_Tapedeck : CroneEngine {
 		SynthDef("wobble",{
 			arg in,out,buf,
 			wowflu=1.0,
-			wobble_rpm=33, wobble_amp=0.05, flutter_amp=0.03, flutter_fixedfreq=6, flutter_variationfreq=2;
+			wobble_rpm=33, wobble_amp=0.05, 
+			flutter_amp=0.03, flutter_fixedfreq=6, 
+			flutter_variationfreq=2;
 			
 			var snd=In.ar(in,2);
 			// wow and flutter from Stefaan Himpe https://sccode.org/1-5bP
-			var pw,pr,sndr,rate,switch_wobble;
+			var pw,pr,sndr,rate;
 			var wow = wobble_amp*SinOsc.kr(wobble_rpm/60,mul:0.1);
 			var flutter = flutter_amp*SinOsc.kr(flutter_fixedfreq+LFNoise2.kr(flutter_variationfreq),mul:0.02);
 			rate= 1 + (wowflu * (wow+flutter));		
@@ -163,8 +165,7 @@ Engine_Tapedeck : CroneEngine {
 			pr=DelayL.ar(Phasor.ar(0, BufRateScale.ir(buf)*rate, 0, BufFrames.ir(buf)),0.2,0.2);
 			BufWr.ar(snd,buf,pw);
 			sndr=BufRd.ar(2,buf,pr,interpolation:4);
-			switch_wobble=Lag.kr(wowflu>0,1);
-			snd=SelectX.ar(\wet.kr(0),[snd,sndr]);
+			snd=SelectX.ar(Lag.kr(wowflu>0,1),[snd,sndr]);
 			
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
@@ -219,7 +220,7 @@ Engine_Tapedeck : CroneEngine {
 			snd = snd.tanh; // limit
 			
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
-			Out.ar(0,snd*\amp.kr(1));
+			Out.ar(0,snd*\db.kr(0).dbamp);
 		}).send(context.server);
 		
 		
@@ -259,7 +260,7 @@ Engine_Tapedeck : CroneEngine {
 						args=args.addAll([key.asSymbol,val]);
 					});
 					switch(synthName.asString,
-						"wobble",{ args=args.addAll([\buf,\bufs.at("wobble")]); },
+						"wobble",{ args=args.addAll([\buf,bufs.at("wobble")]); },
 						"color", { args=args.addAll([\bufExpand,bufs.at("expand"),\bufCompress,bufs.at("compress"),\bufSine,bufSine]); }
 						// TODO add all the others here too
 					);

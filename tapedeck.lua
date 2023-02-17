@@ -85,6 +85,35 @@ function init()
     {stage=4,id="lowgain",name="low gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=4,id="highgain",name="high gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=4,id="shelvingfreq",name="shelf",min=100,max=1000,exp=false,div=10,default=600,unit="Hz"},
+    -- wobble
+    {stage=5,id="toggle",name="wow/flutter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=5,id="wowflu",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="wobble_amp",name="wobble",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="wobble_rpm",name="wobble rpm",min=1,max=90,exp=false,div=1,default=33,unit="Hz"},
+    {stage=5,id="flutter_amp",name="flutter",min=0,max=1,exp=false,div=0.01,default=0.03,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="flutter_fixedfreq",name="flutter fixed",min=0.1,max=30,exp=false,div=0.1,default=6,unit="Hz"},
+    {stage=5,id="flutter_variationfreq",name="flutter variation",min=0.1,max=10,exp=false,div=0.1,default=2,unit="Hz"},
+    -- chew
+    {stage=6,id="toggle",name="chew",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=6,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="freq",name="freq",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- loss
+    {stage=7,id="toggle",name="loss",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=7,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="gap",name="gap",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="thick",name="thick",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="space",name="space",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="speed",name="speed",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- degrade
+    {stage=8,id="toggle",name="degrade",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=8,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- final
+    {stage=9,id="db",name="final",min=-96,max=12,exp=false,div=0.1,default=0,response=1,unit="dB"},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
@@ -92,7 +121,7 @@ function init()
     --   params:add_separator(pram.name)
     -- end
     local name=pram.name
-    if pram.id=="toggle" or pram.stage==0 then
+    if pram.id=="toggle" or pram.stage==0 or pram.stage==9 then
       name=string.upper(name).." >"
     end
     params:add{
