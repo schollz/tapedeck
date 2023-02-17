@@ -11,6 +11,7 @@
 -- E1/E2/E3 changes parameters
 --
 
+musicutil=require("musicutil")
 counter=0
 tape_spin=0
 font_level=15
@@ -53,7 +54,6 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
-
   local params_menu={
     {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,unit="db"},
     -- filter
@@ -80,29 +80,36 @@ function init()
     -- distortion
     {stage=4,id="toggle",name="distortion",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=4,id="dist_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="drivegain",name="gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="dist_bias",name="gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="lowgain",name="gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="highgain",name="gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="drivegain",name="drive",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="dist_bias",name="bias",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="lowgain",name="low gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="highgain",name="high gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=4,id="shelvingfreq",name="shelf",min=100,max=1000,exp=false,div=10,default=600,unit="Hz"},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
+    -- if pram.id=="toggle" then
+    --   params:add_separator(pram.name)
+    -- end
+    local name=pram.name
+    if pram.id=="toggle" or pram.stage==0 then
+      name=string.upper(name).." >"
+    end
     params:add{
       type="control",
       id=id,
-      name=pram.name,
+      name=name,
       controlspec=controlspec.new(pram.min,pram.max,pram.exp and "exp" or "lin",pram.div,pram.default,pram.unit or "",pram.div/(pram.max-pram.min)),
       formatter=pram.formatter,
     }
     params:set_action(id,function(x)
-      if pram.id=="toggle" then 
+      if pram.id=="toggle" then
         engine.toggle(pram.stage,x)
         -- update the hiding/showing in the menu
-        for stage=1,8 do 
-          for _,p in ipairs(params_menu) do 
-            if p.stage==stage then 
-              if params:get("toggle"..p.stage)>0 then 
+        for stage=1,8 do
+          for _,p in ipairs(params_menu) do
+            if p.stage==stage then
+              if params:get("toggle"..p.stage)==0 and p.id~="toggle" then
                 params:hide(p.id..p.stage)
               else
                 params:show(p.id..p.stage)
@@ -110,7 +117,7 @@ function init()
             end
           end
         end
-        -- TODO: reload menu
+        _menu.rebuild_params()
       else
         engine.set(pram.stage,pram.id,pram.val and pram.val(x) or x)
       end
