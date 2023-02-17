@@ -33,23 +33,23 @@ engine.name=Engine_Exists and 'Tapedeck' or nil
 
 function init()
   Needs_Restart=false
-  if not Engine_Exists then
-    clock.run(function()
-      if not Engine_Exists then
-        Needs_Restart=true
-        Restart_Message=UI.Message.new{"installing tapedeck..."}
-        redraw()
-        clock.sleep(1)
-        -- TODO: update this URL
-        os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
-      end
-      Restart_Message=UI.Message.new{"please restart norns."}
-      redraw()
-      clock.sleep(1)
-      do return end
-    end)
-    do return end
-  end
+  -- if not Engine_Exists then
+  --   clock.run(function()
+  --     if not Engine_Exists then
+  --       Needs_Restart=true
+  --       Restart_Message=UI.Message.new{"installing tapedeck..."}
+  --       redraw()
+  --       clock.sleep(1)
+  --       -- TODO: update this URL
+  --       os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
+  --     end
+  --     Restart_Message=UI.Message.new{"please restart norns."}
+  --     redraw()
+  --     clock.sleep(1)
+  --     do return end
+  --   end)
+  --   do return end
+  -- end
 
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
