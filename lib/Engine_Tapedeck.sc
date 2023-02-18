@@ -6,6 +6,7 @@ Engine_Tapedeck : CroneEngine {
 	var syns;
 	var params;
 	var stageNames;
+	var stages;
 	
 	*new { arg context, doneCallback;
 		^super.new(context, doneCallback);
@@ -13,7 +14,6 @@ Engine_Tapedeck : CroneEngine {
 	
 	
 	alloc {
-		var stages=10;
 		var mips=0.0;
 		var piped = Pipe.new("lscpu | grep BogoMIPS | awk '{print $2}'", "r"); 
 		var oversample=2;
@@ -55,15 +55,17 @@ Engine_Tapedeck : CroneEngine {
 		stageNames = [
 			"preamp",		// 0
 			"filters",		// 1
-			"color",		// 2
-			"tape",			// 3
-			"distortion",	// 4
-			"wobble",		// 5
-			"chew",			// 6
-			"loss",			// 7
-			"degrade",		// 8
-			"final"			// 9
+			"compression", 	// 2
+			"color",		// 3
+			"tape",			// 4
+			"distortion",	// 5
+			"wobble",		// 6
+			"chew",			// 7
+			"loss",			// 8
+			"degrade",		// 9
+			"final"			// 10
 		];
+		stages=stageNames.size;
 		
 		SynthDef("passthrough", {
 			arg in,out;
@@ -103,6 +105,23 @@ Engine_Tapedeck : CroneEngine {
 			tascam_snd=BPeakEQ.ar(tascam_snd,7000,db:1);
 			tascam_snd=BLowPass.ar(tascam_snd,10000);
 			snd = (tascam*tascam_snd)+((1-tascam)*snd);
+			
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
+			Out.ar(out,snd);
+		}).send(context.server);
+				
+		SynthDef("compression", {
+			arg in,out;
+			var snd=In.ar(in,2);
+			
+			snd = snd * \drive.kr(0).dbamp;
+			snd = Compander.ar(snd,snd,
+				thresh: \thresh.kr(0.5).dbamp,
+				slopeBelow: \slopeBelow.kr(1).dbamp,
+				slopeAbove: \slopeAbove.kr(0.3).dbamp,
+				clampTime: \clampTime.kr(0.01),
+				relaxTime: \relaxTime.kr(0.01),
+			);
 			
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);

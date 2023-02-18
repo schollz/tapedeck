@@ -13,6 +13,7 @@
 
 musicutil=require("musicutil")
 counter=0
+tape_spin_=0.25
 tape_spin=0
 font_level=15
 message="drive=0.5"
@@ -21,15 +22,17 @@ pcur=1
 groups={
   {"preamp0","preamp0","preamp0"},
   {"toggle1","hpf1","lpf1"},
-  {"toggle2","sine_drive_wet2","compress_curve_wet2"},
-  {"toggle3","tape_bias3","drive3"},
-  {"toggle4","drivegain4","dist_bias4"},
-  {"toggle5","wobble_amp5","flutter_amp5"},
-  {"toggle6","depth6","freq6"},
-  {"toggle7","gap7","speed7"},
-  {"toggle8","depth8","amount8"},
-  {"db9","db9","db9"},
+  {"toggle2","thresh2","drive2"},
+  {"toggle3","sine_drive_wet3","compress_curve_wet3"},
+  {"toggle4","tape_bias4","drive4"},
+  {"toggle5","drivegain5","dist_bias5"},
+  {"toggle6","wobble_amp6","flutter_amp6"},
+  {"toggle7","depth7","freq7"},
+  {"toggle8","gap8","speed8"},
+  {"toggle9","depth9","amount9"},
+  {"db10","db10","db10"},
 }
+stages_toggled=0
 
 current_monitor_level=0
 UI=require 'ui'
@@ -65,61 +68,69 @@ function init()
     -- filter
     {stage=1,id="toggle",name="filter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=1,id="tascam",name="tascam-esque",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
-    {stage=1,id="lpf",name="lpf",min=10,max=135,exp=false,div=0.5,default=135,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return musicutil.note_num_to_name(math.floor(param:get()),true)end},
+    {stage=1,id="lpf",name="lpf",min=10,max=135,exp=false,div=0.1,default=135,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
     {stage=1,id="lpfqr",name="lpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
-    {stage=1,id="hpf",name="hpf",min=1,max=60,exp=false,div=0.5,default=10,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return musicutil.note_num_to_name(math.floor(param:get()),true)end},
+    {stage=1,id="hpf",name="hpf",min=1,max=60,exp=false,div=0.1,default=10,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return  math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
     {stage=1,id="hpfqr",name="hpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
+    -- compression
+    {stage=2,id="toggle",name="compression",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=2,id="drive",name="drive",min=-12,max=64,exp=false,div=0.1,default=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="thresh",name="thresh",min=-96,max=24,exp=false,div=0.1,default=-6,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeBelow",name="slopeBelow",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeAbove",name="slopeAbove",min=-96,max=24,exp=false,div=0.1,default=-12,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="clampTime",name="clampTime",min=0.001,max=1,exp=false,div=0.001,default=0.002,unit="s"},
+    {stage=2,id="relaxTime",name="relaxTime",min=0.001,max=1,exp=false,div=0.001,default=0.01,unit="s"},
     -- color
-    {stage=2,id="toggle",name="color",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=2,id="sine_drive_wet",name="sinoid wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="sine_drive",name="sinoid drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="compress_curve_wet",name="compress wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="compress_curve_drive",name="compress drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="expand_curve_wet",name="expand wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="expand_curve_drive",name="expand drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="toggle",name="color",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=3,id="sine_drive_wet",name="sinoid wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="sine_drive",name="sinoid drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="compress_curve_wet",name="compress wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="compress_curve_drive",name="compress drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="expand_curve_wet",name="expand wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="expand_curve_drive",name="expand drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     -- tape
-    {stage=3,id="toggle",name="tape",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=3,id="tape_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=3,id="tape_bias",name="bias",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=3,id="saturation",name="saturation",min=0,max=2,exp=false,div=0.01,default=0.8,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=3,id="drive",name="drive",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="toggle",name="tape",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=4,id="tape_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="tape_bias",name="bias",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="saturation",name="saturation",min=0,max=2,exp=false,div=0.01,default=0.8,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="drive",name="drive",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     -- distortion
-    {stage=4,id="toggle",name="distortion",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=4,id="dist_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="drivegain",name="drive",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="dist_bias",name="bias",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="lowgain",name="low gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="highgain",name="high gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=4,id="shelvingfreq",name="shelf",min=100,max=1000,exp=false,div=10,default=600,unit="Hz"},
+    {stage=5,id="toggle",name="distortion",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=5,id="dist_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="drivegain",name="drive",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="dist_bias",name="bias",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="lowgain",name="low gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="highgain",name="high gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="shelvingfreq",name="shelf",min=100,max=1000,exp=false,div=10,default=600,unit="Hz"},
     -- wobble
-    {stage=5,id="toggle",name="wow/flutter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=5,id="wowflu",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=5,id="wobble_amp",name="wobble",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=5,id="wobble_rpm",name="wobble rpm",min=1,max=90,exp=false,div=1,default=33,unit="Hz"},
-    {stage=5,id="flutter_amp",name="flutter",min=0,max=1,exp=false,div=0.01,default=0.03,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=5,id="flutter_fixedfreq",name="flutter fixed",min=0.1,max=30,exp=false,div=0.1,default=6,unit="Hz"},
-    {stage=5,id="flutter_variationfreq",name="flutter variation",min=0.1,max=10,exp=false,div=0.1,default=2,unit="Hz"},
+    {stage=6,id="toggle",name="wow/flutter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=6,id="wowflu",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="wobble_amp",name="wobble",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="wobble_rpm",name="speed",min=1,max=90,exp=false,div=1,default=33,unit="rpm"},
+    {stage=6,id="flutter_amp",name="flutter",min=0,max=1,exp=false,div=0.01,default=0.03,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="flutter_fixedfreq",name="flutter fixed",min=0.1,max=30,exp=false,div=0.1,default=6,unit="Hz"},
+    {stage=6,id="flutter_variationfreq",name="flutter variation",min=0.1,max=10,exp=false,div=0.1,default=2,unit="Hz"},
     -- chew
-    {stage=6,id="toggle",name="chew",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=6,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=6,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=6,id="freq",name="freq",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=6,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    -- loss
-    {stage=7,id="toggle",name="loss",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=7,id="toggle",name="chew",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=7,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=7,id="gap",name="gap",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=7,id="thick",name="thick",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=7,id="space",name="space",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=7,id="speed",name="speed",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    -- degrade
-    {stage=8,id="toggle",name="degrade",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=7,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.15,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="freq",name="freq",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- loss
+    {stage=8,id="toggle",name="loss",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=8,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=8,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=8,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=8,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="gap",name="gap",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="thick",name="thick",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="space",name="space",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="speed",name="speed",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- degrade
+    {stage=9,id="toggle",name="degrade",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=9,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     -- final
-    {stage=9,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=10,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
@@ -127,7 +138,7 @@ function init()
     --   params:add_separator(pram.name)
     -- end
     local name=pram.name
-    if pram.id=="toggle" or pram.stage==0 or pram.stage==9 then
+    if pram.id=="toggle" or pram.stage==0 or pram.stage==10 then
       name=string.upper(name).." >"
     end
     params:add{
@@ -141,7 +152,10 @@ function init()
       if pram.id=="toggle" then
         engine.toggle(pram.stage,x)
         -- update the hiding/showing in the menu
-        for stage=1,8 do
+        for stage=1,9 do
+          if params:get("toggle"..stage)==1 then 
+            stages_toggled=stages_toggled+1
+          end
           for _,p in ipairs(params_menu) do
             if p.stage==stage then
               if params:get("toggle"..p.stage)==0 and p.id~="toggle" then
@@ -161,7 +175,7 @@ function init()
 
   params:bang()
 
-  msg("MIX "..ToRomanNumerals(math.random(1,12)),30)
+  msg("TAPEDECK v2.0.0",30)
 
   clock.run(function()
     while true do
@@ -272,10 +286,11 @@ function redraw()
   screen.clear()
   screen.aa(1)
   counter=counter+1
-  tape_spin=tape_spin+(counter%math.random(1,4)==0 and 1 or 0)
-  if tape_spin==5 then
-    tape_spin=0
+  tape_spin=tape_spin+tape_spin_
+  if tape_spin>=4.5 or tape_spin<=0 then
+    tape_spin_=tape_spin_*-1
   end
+  tape_spin=params:get_raw(groups[pcur][1])==0 and 0 or tape_spin
   local tape_color=params:get_raw(groups[pcur][1])==0 and 5 or 15
   local band_color=9
   local bot_color=6
@@ -351,7 +366,7 @@ function redraw()
 
   if font_level>0 then
     font_level=font_level-1
-    screen.aa(0)
+    screen.aa(1)
     screen.font_face(1)
     screen.font_size(8)
     screen.move(64,20)
@@ -359,5 +374,19 @@ function redraw()
     screen.text_center(message)
   end
 
+
+  screen.update()
+  
+  for ii,i in ipairs({10,12,14,18,25,30,40,50,66}) do
+    if ii-1<stages_toggled then
+      screen.aa(1)
+      local y=(counter+i)%64
+      screen.move(0,y)
+      screen.line(128,y)
+      screen.blend_mode(math.random(1,10))
+      screen.level(1)
+      screen.stroke()
+    end
+  end
   screen.update()
 end
