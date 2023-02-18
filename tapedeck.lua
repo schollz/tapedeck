@@ -19,9 +19,16 @@ message="drive=0.5"
 pcur=1
 
 groups={
-  {"tape_wet","saturation","drive"},
-  {"dist_wet","lowgain","highgain"},
-  {"wowflu","wobble_amp","flutter_amp"},
+  {"preamp0","preamp0","preamp0"},
+  {"toggle1","hpf1","lpf1"},
+  {"toggle2","sine_drive_wet2","compress_curve_wet2"},
+  {"toggle3","tape_bias3","drive3"},
+  {"toggle4","drivegain4","dist_bias4"},
+  {"toggle5","wobble_amp5","flutter_amp5"},
+  {"toggle6","depth6","freq6"},
+  {"toggle7","gap7","speed7"},
+  {"toggle8","depth8","amount8"},
+  {"db9","db9","db9"},
 }
 
 current_monitor_level=0
@@ -33,29 +40,28 @@ engine.name=Engine_Exists and 'Tapedeck' or nil
 
 function init()
   Needs_Restart=false
-  -- if not Engine_Exists then
-  --   clock.run(function()
-  --     if not Engine_Exists then
-  --       Needs_Restart=true
-  --       Restart_Message=UI.Message.new{"installing tapedeck..."}
-  --       redraw()
-  --       clock.sleep(1)
-  --       -- TODO: update this URL
-  --       os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
-  --     end
-  --     Restart_Message=UI.Message.new{"please restart norns."}
-  --     redraw()
-  --     clock.sleep(1)
-  --     do return end
-  --   end)
-  --   do return end
-  -- end
+  if not Engine_Exists then
+    clock.run(function()
+      if not Engine_Exists then
+        Needs_Restart=true
+        Restart_Message=UI.Message.new{"installing tapedeck..."}
+        redraw()
+        clock.sleep(1)
+        os.execute("cd /home/we/.local/share/SuperCollider/Extensions/ && wget https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz")
+      end
+      Restart_Message=UI.Message.new{"please restart norns."}
+      redraw()
+      clock.sleep(1)
+      do return end
+    end)
+    do return end
+  end
 
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
   local params_menu={
-    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,unit="db"},
+    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
     -- filter
     {stage=1,id="toggle",name="filter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=1,id="tascam",name="tascam-esque",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
@@ -113,7 +119,7 @@ function init()
     {stage=8,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=8,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     -- final
-    {stage=9,id="db",name="final",min=-96,max=12,exp=false,div=0.1,default=0,response=1,unit="dB"},
+    {stage=9,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
@@ -210,20 +216,26 @@ end
 
 function key(k,z)
   if k>1 and z==1 then
-    pcur=util.clamp(pcur+(k*2-5),1,3)
-    if pcur==1 then
-      msg("tape fx")
-    elseif pcur==2 then
-      msg("dist fx")
-    elseif pcur==3 then
-      msg("wow/flu")
-    end
+    pcur=util.clamp(pcur+(k*2-5),1,#groups)
+    msg(get_name(groups[pcur][1]))
   end
 end
 
 function enc(k,d)
-  local name=groups[pcur][k]
-  params:delta(name,d)
+  if k>1 and params:get_raw(groups[pcur][1])==0 then 
+    params:set(groups[pcur][1],1)
+  end
+  local id=groups[pcur][k]
+  params:delta(id,d)
+  msg(get_name(id).." "..params:string(id))
+end
+
+function get_name(id)
+ local name=params.params[params.lookup[id]].name
+  name=string.lower(name)
+  name=name:gsub('%>', '')
+  name=string.gsub(name, '^%s*(.-)%s*$', '%1')
+  return name
 end
 
 function msg(s,l)
@@ -264,7 +276,7 @@ function redraw()
   if tape_spin==5 then
     tape_spin=0
   end
-  local tape_color=15
+  local tape_color=params:get_raw(groups[pcur][1])==0 and 5 or 15
   local band_color=9
   local bot_color=6
   local ring_color=12
@@ -340,9 +352,9 @@ function redraw()
   if font_level>0 then
     font_level=font_level-1
     screen.aa(0)
-    screen.font_face(15)
-    screen.font_size(11)
-    screen.move(64,21)
+    screen.font_face(1)
+    screen.font_size(8)
+    screen.move(64,20)
     screen.level(font_level>15 and 15 or font_level)
     screen.text_center(message)
   end
