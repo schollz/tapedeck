@@ -1,4 +1,4 @@
--- tapedeck v1.0.0
+-- tapedeck v2.0.0
 -- tape emulator fx
 --
 -- llllllll.co/t/tapedeck
@@ -11,23 +11,34 @@
 -- E1/E2/E3 changes parameters
 --
 
+musicutil=require("musicutil")
 counter=0
+tape_spin_=0.25
 tape_spin=0
 font_level=15
 message="drive=0.5"
 pcur=1
 
 groups={
-  {"tape_wet","saturation","drive"},
-  {"dist_wet","lowgain","highgain"},
-  {"wowflu","wobble_amp","flutter_amp"},
+  {"preamp0","preamp0","preamp0"},
+  {"toggle1","hpf1","lpf1"},
+  {"toggle2","thresh2","drive2"},
+  {"toggle3","sine_drive_wet3","compress_curve_wet3"},
+  {"toggle4","tape_bias4","drive4"},
+  {"toggle5","drivegain5","dist_bias5"},
+  {"toggle6","wobble_amp6","flutter_amp6"},
+  {"toggle7","depth7","freq7"},
+  {"toggle8","gap8","speed8"},
+  {"toggle9","depth9","amount9"},
+  {"db10","db10","db10"},
 }
+stages_toggled=0
 
 current_monitor_level=0
 UI=require 'ui'
 loaded_files=0
 Needs_Restart=false
-Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogTape_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
+Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogDegrade_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
 engine.name=Engine_Exists and 'Tapedeck' or nil
 
 function init()
@@ -39,7 +50,7 @@ function init()
         Restart_Message=UI.Message.new{"installing tapedeck..."}
         redraw()
         clock.sleep(1)
-        os.execute("cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/")
+        os.execute("cd /home/we/.local/share/SuperCollider/Extensions/ && wget https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz")
       end
       Restart_Message=UI.Message.new{"please restart norns."}
       redraw()
@@ -52,121 +63,119 @@ function init()
   current_monitor_level=params:get("monitor_level")
   params:set("monitor_level",-99)
 
-  params:add_control("preamp","preamp",controlspec.new(0,10,'lin',0.1,1,'',0.1/10))
-  params:set_action("preamp",function(x)
-    engine.preamp(x)
-  end)
-  params:add_control("amp","amp",controlspec.new(0,1,'lin',0.01/1,1,'',0.01/1))
-  params:set_action("amp",function(x)
-    engine.amp(x)
-  end)
-  params:add_control("tascam","tascam",controlspec.new(0,1,'lin',0.01/1,0,'',0.01/1))
-  params:set_action("tascam",function(x)
-    engine.tascam(x)
-  end)
-
-  params:add_separator("tape")
-  local ps={
-    {"tape_wet","wet",0,100},
-    {"tape_bias","bias",50,100},
-    {"saturation","sat",80,200},
-    {"drive","drive",80,200},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',1,p[3],"%",1/p[4]))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_separator("tape distortion")
-  local ps={
-    {"dist_wet","wet",0,100},
-    {"drivegain","drive",21,100},
-    {"dist_bias","bias",22,250},
-    {"lowgain","low",5,30,0.1},
-    {"highgain","high",5,30,0.1},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,p[4],'lin',p[5] or 1,p[3],"%",(p[5] or 1)/p[4]))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_control("shelvingfreq","shelving freq",controlspec.new(20,16000,'exp',10,600,'Hz',10/16000))
-  params:set_action("shelvingfreq",function(x)
-    engine.shelvingfreq(x)
-  end)
-
-  params:add_separator("wow / flutter")
-  local ps={
-    {"wowflu","wet",0},
-    {"wobble_amp","wobble",8},
-    {"flutter_amp","flutter",3},
-  }
-  for _,p in ipairs(ps) do
-    params:add_control(p[1],p[2],controlspec.new(0,100,'lin',1,p[3],"%",1/100))
-    params:set_action(p[1],function(x)
-      engine[p[1]](x/100)
-      msg(p[2].."="..math.floor(x).."%")
-    end)
-  end
-  params:add_control("wobble_rpm","wobble rpm",controlspec.new(1,66,'lin',1,33,'rpm',1/66))
-  params:set_action("wobble_rpm",function(x)
-    engine.wobble_rpm(x)
-  end)
-  params:add_control("flutter_fixedfreq","flutter freq",controlspec.new(0.1,10,'lin',0.1,6,'Hz',0.1/10))
-  params:set_action("flutter_fixedfreq",function(x)
-    engine.flutter_fixedfreq(x)
-  end)
-  params:add_control("flutter_variationfreq","flutter var freq",controlspec.new(0.1,10,'lin',0.1,2,'Hz',0.1/10))
-  params:set_action("flutter_variationfreq",function(x)
-    engine.flutter_variationfreq(x)
-  end)
-
-  params:add_separator("tape compression")
   local params_menu={
-    {id="sine_drive",name="saturate",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="compress_curve_wet",name="compress curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="compress_curve_drive",name="compress curve drive",min=0,max=10,exp=false,div=0.01,default=0.25,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="expand_curve_wet",name="expand curve wet",min=0,max=1,exp=false,div=0.01,default=0.0,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
-    {id="expand_curve_drive",name="expand curve drive",min=0,max=10,exp=false,div=0.1,default=4,formatter=function(param) return string.format("%2.0f%%",param:get()*100) end},
+    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    -- filter
+    {stage=1,id="toggle",name="filter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=1,id="tascam",name="tascam-esque",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
+    {stage=1,id="lpf",name="lpf",min=10,max=135,exp=false,div=0.1,default=135,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
+    {stage=1,id="lpfqr",name="lpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
+    {stage=1,id="hpf",name="hpf",min=1,max=60,exp=false,div=0.1,default=10,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return  math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
+    {stage=1,id="hpfqr",name="hpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
+    -- compression
+    {stage=2,id="toggle",name="compression",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=2,id="drive",name="drive",min=-12,max=64,exp=false,div=0.1,default=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="thresh",name="thresh",min=-96,max=24,exp=false,div=0.1,default=-6,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeBelow",name="slopeBelow",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeAbove",name="slopeAbove",min=-96,max=24,exp=false,div=0.1,default=-12,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="clampTime",name="clampTime",min=0.001,max=1,exp=false,div=0.001,default=0.002,unit="s"},
+    {stage=2,id="relaxTime",name="relaxTime",min=0.001,max=1,exp=false,div=0.001,default=0.01,unit="s"},
+    -- color
+    {stage=3,id="toggle",name="color",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=3,id="sine_drive_wet",name="sinoid wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="sine_drive",name="sinoid drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="compress_curve_wet",name="compress wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="compress_curve_drive",name="compress drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="expand_curve_wet",name="expand wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=3,id="expand_curve_drive",name="expand drive",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- tape
+    {stage=4,id="toggle",name="tape",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=4,id="tape_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="tape_bias",name="bias",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="saturation",name="saturation",min=0,max=2,exp=false,div=0.01,default=0.8,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=4,id="drive",name="drive",min=0,max=2,exp=false,div=0.01,default=0.9,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- distortion
+    {stage=5,id="toggle",name="distortion",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=5,id="dist_wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="drivegain",name="drive",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="dist_bias",name="bias",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="lowgain",name="low gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="highgain",name="high gain",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=5,id="shelvingfreq",name="shelf",min=100,max=1000,exp=false,div=10,default=600,unit="Hz"},
+    -- wobble
+    {stage=6,id="toggle",name="wow/flutter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=6,id="wowflu",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="wobble_amp",name="wobble",min=0,max=1,exp=false,div=0.01,default=0.05,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="wobble_rpm",name="speed",min=1,max=90,exp=false,div=1,default=33,unit="rpm"},
+    {stage=6,id="flutter_amp",name="flutter",min=0,max=1,exp=false,div=0.01,default=0.03,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=6,id="flutter_fixedfreq",name="flutter fixed",min=0.1,max=30,exp=false,div=0.1,default=6,unit="Hz"},
+    {stage=6,id="flutter_variationfreq",name="flutter variation",min=0.1,max=10,exp=false,div=0.1,default=2,unit="Hz"},
+    -- chew
+    {stage=7,id="toggle",name="chew",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=7,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.15,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="freq",name="freq",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=7,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- loss
+    {stage=8,id="toggle",name="loss",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=8,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="gap",name="gap",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="thick",name="thick",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="space",name="space",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=8,id="speed",name="speed",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- degrade
+    {stage=9,id="toggle",name="degrade",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=9,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=9,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- final
+    {stage=10,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
+    local id=pram.id..pram.stage
+    -- if pram.id=="toggle" then
+    --   params:add_separator(pram.name)
+    -- end
+    local name=pram.name
+    if pram.id=="toggle" or pram.stage==0 or pram.stage==10 then
+      name=string.upper(name).." >"
+    end
     params:add{
       type="control",
-      id=pram.id,
-      name=pram.name,
+      id=id,
+      name=name,
       controlspec=controlspec.new(pram.min,pram.max,pram.exp and "exp" or "lin",pram.div,pram.default,pram.unit or "",pram.div/(pram.max-pram.min)),
       formatter=pram.formatter,
     }
-    params:set_action(pram.id,function(v)
-      engine[pram.id](pram.fn~=nil and pram.fn(v) or v)
+    params:set_action(id,function(x)
+      if pram.id=="toggle" then
+        engine.toggle(pram.stage,x)
+        -- update the hiding/showing in the menu
+        for stage=1,9 do
+          if params:get("toggle"..stage)==1 then 
+            stages_toggled=stages_toggled+1
+          end
+          for _,p in ipairs(params_menu) do
+            if p.stage==stage then
+              if params:get("toggle"..p.stage)==0 and p.id~="toggle" then
+                params:hide(p.id..p.stage)
+              else
+                params:show(p.id..p.stage)
+              end
+            end
+          end
+        end
+        _menu.rebuild_params()
+      else
+        engine.set(pram.stage,pram.id,pram.val and pram.val(x) or x)
+      end
     end)
   end
 
-  params:add_separator("filters")
-  params:add_control("lpf","low-pass filter",controlspec.new(100,20000,'exp',100,18000,'Hz',100/18000))
-  params:set_action("lpf",function(x)
-    engine.lpf(x)
-  end)
-  params:add_control("lpfqr","low-pass qr",controlspec.new(0.02,1,'lin',0.02,0.7,'',0.02/1))
-  params:set_action("lpfqr",function(x)
-    engine.hpfqr(x)
-  end)
-  params:add_control("hpf","high-pass filter",controlspec.new(10,20000,'exp',10,60,'Hz',10/18000))
-  params:set_action("hpf",function(x)
-    engine.hpf(x)
-  end)
-  params:add_control("hpfqr","high-pass qr",controlspec.new(0.02,1,'lin',0.02,0.7,'',0.02/1))
-  params:set_action("hpfqr",function(x)
-    engine.hpfqr(x)
-  end)
-
   params:bang()
 
-  msg("MIX "..ToRomanNumerals(math.random(1,12)),30)
+  msg("TAPEDECK v2.0.0",30)
 
   clock.run(function()
     while true do
@@ -221,20 +230,26 @@ end
 
 function key(k,z)
   if k>1 and z==1 then
-    pcur=util.clamp(pcur+(k*2-5),1,3)
-    if pcur==1 then
-      msg("tape fx")
-    elseif pcur==2 then
-      msg("dist fx")
-    elseif pcur==3 then
-      msg("wow/flu")
-    end
+    pcur=util.clamp(pcur+(k*2-5),1,#groups)
+    msg(get_name(groups[pcur][1]))
   end
 end
 
 function enc(k,d)
-  local name=groups[pcur][k]
-  params:delta(name,d)
+  if k>1 and params:get_raw(groups[pcur][1])==0 then 
+    params:set(groups[pcur][1],1)
+  end
+  local id=groups[pcur][k]
+  params:delta(id,d)
+  msg(get_name(id).." "..params:string(id))
+end
+
+function get_name(id)
+ local name=params.params[params.lookup[id]].name
+  name=string.lower(name)
+  name=name:gsub('%>', '')
+  name=string.gsub(name, '^%s*(.-)%s*$', '%1')
+  return name
 end
 
 function msg(s,l)
@@ -271,11 +286,12 @@ function redraw()
   screen.clear()
   screen.aa(1)
   counter=counter+1
-  tape_spin=tape_spin+(counter%math.random(1,4)==0 and 1 or 0)
-  if tape_spin==5 then
-    tape_spin=0
+  tape_spin=tape_spin+tape_spin_
+  if tape_spin>=4.5 or tape_spin<=0 then
+    tape_spin_=tape_spin_*-1
   end
-  local tape_color=15
+  tape_spin=params:get_raw(groups[pcur][1])==0 and 0 or tape_spin
+  local tape_color=params:get_raw(groups[pcur][1])==0 and 5 or 15
   local band_color=9
   local bot_color=6
   local ring_color=12
@@ -350,13 +366,27 @@ function redraw()
 
   if font_level>0 then
     font_level=font_level-1
-    screen.aa(0)
-    screen.font_face(15)
-    screen.font_size(11)
-    screen.move(64,21)
+    screen.aa(1)
+    screen.font_face(1)
+    screen.font_size(8)
+    screen.move(64,20)
     screen.level(font_level>15 and 15 or font_level)
     screen.text_center(message)
   end
 
+
+  screen.update()
+  
+  for ii,i in ipairs({10,12,14,18,25,30,40,50,66}) do
+    if ii-1<stages_toggled then
+      screen.aa(1)
+      local y=(counter+i)%64
+      screen.move(0,y)
+      screen.line(128,y)
+      screen.blend_mode(math.random(1,10))
+      screen.level(1)
+      screen.stroke()
+    end
+  end
   screen.update()
 end
