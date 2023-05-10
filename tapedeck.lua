@@ -36,29 +36,15 @@ groups={
 stages_toggled=0
 
 current_monitor_level=0
-UI=require 'ui'
-loaded_files=0
-Needs_Restart=false
-Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogDegrade_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
-engine.name=Engine_Exists and 'Tapedeck' or nil
+
+-- check for requirements
+installer_=include("lib/installer")
+installer=installer_:init{requirements={"Fverb","Chew","Degrade","Tape"},zip="https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz"}
+engine.name=installer:ready() and 'Tapedeck' or nil
 
 function init()
-  Needs_Restart=false
-  if not Engine_Exists then
-    clock.run(function()
-      if not Engine_Exists then
-        Needs_Restart=true
-        Restart_Message=UI.Message.new{"installing tapedeck..."}
-        redraw()
-        clock.sleep(1)
-        os.execute("cd /home/we/.local/share/SuperCollider/Extensions/ && wget https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz")
-      end
-      Restart_Message=UI.Message.new{"please restart norns."}
-      redraw()
-      clock.sleep(1)
-      do return end
-    end)
-    do return end
+  if not installer:ready() then 
+    do return end 
   end
 
   current_monitor_level=params:get("monitor_level")
@@ -234,6 +220,10 @@ function ToRomanNumerals(s)
 end
 
 function key(k,z)
+  if not installer:ready() then 
+    installer:key(k,z)
+    do return end 
+  end
   if k>1 and z==1 then
     pcur=util.clamp(pcur+(k*2-5),1,#groups)
     msg(get_name(groups[pcur][1]))
@@ -241,6 +231,9 @@ function key(k,z)
 end
 
 function enc(k,d)
+  if not installer:ready() then 
+    do return end 
+  end
   if k>1 and params:get_raw(groups[pcur][1])==0 then
     params:set(groups[pcur][1],1)
   end
@@ -281,12 +274,9 @@ function circle(x,y,r,l)
 end
 
 function redraw()
-  if Needs_Restart then
-    screen.clear()
-    screen.level(15)
-    Restart_Message:redraw()
-    screen.update()
-    return
+  if not installer:ready() then 
+    installer:redraw()
+    do return end 
   end
   screen.clear()
   screen.aa(1)
@@ -394,3 +384,4 @@ function redraw()
   end
   screen.update()
 end
+
