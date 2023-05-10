@@ -46,16 +46,18 @@ function Installer:init()
     if self.zip=="" then 
         print("NEED TO SPECIFY ZIP FILE")
     end
+    self.requirements=self.requirements or {}
+
     self.ready_to_restart=false
     self.satisfied=false
-    self.requirements=self.requirements or {}
+
     -- make sure all requirements are satisfied
     local has_requirements={}
     local num_requirements = 0
     for _, r in ipairs(self.has_requirements) do 
         has_requirements[r]=false
-        num_requirements = num_requirements + 1
     end
+    num_requirements=#has_requirements
 
     -- find all the supercollider files
     local folders_to_check={
@@ -67,15 +69,18 @@ function Installer:init()
     for _,folder in ipairs(folders_to_check) do
         for _,file in ipairs(self:list_files(folder)) do
             if not string.find(file,"ignore") then 
-                _,filename,_=self:split_path(file)
-                for k,found in pairs(has_requirements) do 
-                    if not found then 
-                        if string.find(filename,k) then 
-                            has_requirements[k]=true 
-                            num_requirements_found = num_requirements_found + 1
-                            if num_requirements == num_requirements_found then 
-                                self.satisfied = true
-                                do return true end 
+                folder,filename,_=self:split_path(file)
+                if string.find(folder,"/ignore/") then 
+                else
+                    for k,found in pairs(has_requirements) do 
+                        if not found then 
+                            if string.find(filename,k) then 
+                                has_requirements[k]=true 
+                                num_requirements_found = num_requirements_found + 1
+                                if num_requirements == num_requirements_found then 
+                                    self.satisfied = true
+                                    do return true end 
+                                end
                             end
                         end
                     end
@@ -83,6 +88,7 @@ function Installer:init()
             end
         end
     end
+    -- create array of just the missing pieces
     self.missing_requirements={}
     for k,found in pairs(has_requirements) do 
         if not found then 
@@ -111,11 +117,13 @@ function Installer:install()
             for _, file_needed in ipairs(self.missing_requirements) do 
                 if string.find(filename,file_needed) then 
                     -- copy it
+                    print("copying "..filename.." to Extensions...")
                     os.execute(string.format("cp %s /home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/",file))
                 end
             end
         end
     end
+    os.execute("cd /tmp/ && rm -rf norns-installer")
     self.ready_to_restart=true
     self.installing=false
 end
