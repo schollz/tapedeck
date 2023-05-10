@@ -39,7 +39,7 @@ current_monitor_level=0
 
 -- check for requirements
 installer_=include("lib/installer")
-installer=installer_:init{requirements={"Fverb","Chew","Degrade","Tape"},zip="https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz"}
+installer=installer_:init{requirements={"Fverb","Analog"},zip="https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz"}
 engine.name=installer:ready() and 'Tapedeck' or nil
 
 function init()
