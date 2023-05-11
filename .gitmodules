@@ -1,0 +1,3 @@
+[submodule "scinstaller"]
+	path = scinstaller
+	url = https://github.com/schollz/scinstaller
