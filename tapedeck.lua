@@ -39,7 +39,7 @@ current_monitor_level=0
 
 -- check for requirements
 installer_=include("scinstaller/scinstaller")
-installer=installer_:new{requirements={"Fverb","AnalogTape","VintageDistortion","Chew","Loss","Degrade"},zip="https://github.com/schollz/portedplugins/releases/download/v0.4.5/PortedPlugins-RaspberryPi.zip"}
+installer=installer_:new{requirements={"Fverb","AnalogTape","VintageDistortion","AnalogChew","AnalogLoss","AnalogDegrade"},zip="https://github.com/schollz/portedplugins/releases/download/v0.4.5/PortedPlugins-RaspberryPi.zip"}
 engine.name=installer:ready() and 'Tapedeck' or nil
 
 function init()
