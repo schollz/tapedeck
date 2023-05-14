@@ -1,4 +1,4 @@
--- tapedeck v2.0.0
+-- tapedeck v2.1.0
 -- tape emulator fx
 --
 -- llllllll.co/t/tapedeck
@@ -30,32 +30,25 @@ groups={
   {"toggle7","depth7","freq7"},
   {"toggle8","gap8","speed8"},
   {"toggle9","depth9","amount9"},
-  {"db10","db10","db10"},
+  {"toggle10","wet10","predelay10"},
+  {"db11","db11","db11"},
 }
 stages_toggled=0
 
 current_monitor_level=0
-UI=require 'ui'
-loaded_files=0
-Needs_Restart=false
-Engine_Exists=(util.file_exists('/home/we/.local/share/SuperCollider/Extensions/supercollider-plugins/AnalogDegrade_scsynth.so') or util.file_exists("/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so"))
-engine.name=Engine_Exists and 'Tapedeck' or nil
+
+-- check for requirements
+installer_=include("scinstaller/scinstaller")
+installer=installer_:new{requirements={"Fverb","AnalogTape","VintageDistortion","AnalogChew","AnalogLoss","AnalogDegrade"},zip="https://github.com/schollz/portedplugins/releases/download/v0.4.5/PortedPlugins-RaspberryPi.zip"}
+engine.name=installer:ready() and 'Tapedeck' or nil
 
 function init()
-  Needs_Restart=false
-  if not Engine_Exists then
+  if not installer:ready() then
     clock.run(function()
-      if not Engine_Exists then
-        Needs_Restart=true
-        Restart_Message=UI.Message.new{"installing tapedeck..."}
+      while true do
         redraw()
-        clock.sleep(1)
-        os.execute("cd /home/we/.local/share/SuperCollider/Extensions/ && wget https://github.com/schollz/tapedeck/releases/download/portedplugins2/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz")
+        clock.sleep(1/5)
       end
-      Restart_Message=UI.Message.new{"please restart norns."}
-      redraw()
-      clock.sleep(1)
-      do return end
     end)
     do return end
   end
@@ -64,20 +57,20 @@ function init()
   params:set("monitor_level",-99)
 
   local params_menu={
-    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=0,id="preamp",name="preamp",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
     -- filter
     {stage=1,id="toggle",name="filter",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=1,id="tascam",name="tascam-esque",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "yes" or "no" end},
     {stage=1,id="lpf",name="lpf",min=10,max=135,exp=false,div=0.1,default=135,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
     {stage=1,id="lpfqr",name="lpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
-    {stage=1,id="hpf",name="hpf",min=1,max=60,exp=false,div=0.1,default=10,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return  math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
+    {stage=1,id="hpf",name="hpf",min=1,max=60,exp=false,div=0.1,default=10,val=function(x) return musicutil.note_num_to_freq(x) end,formatter=function(param) return math.floor(musicutil.note_num_to_freq(math.floor(param:get()))).." Hz"end},
     {stage=1,id="hpfqr",name="hpf qr",min=0.01,max=1,exp=false,div=0.01,default=0.71},
     -- compression
     {stage=2,id="toggle",name="compression",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
-    {stage=2,id="drive",name="drive",min=-12,max=64,exp=false,div=0.1,default=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
-    {stage=2,id="thresh",name="thresh",min=-96,max=24,exp=false,div=0.1,default=-6,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
-    {stage=2,id="slopeBelow",name="slopeBelow",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
-    {stage=2,id="slopeAbove",name="slopeAbove",min=-96,max=24,exp=false,div=0.1,default=-12,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="drive",name="drive",min=-12,max=64,exp=false,div=0.1,default=1,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="thresh",name="thresh",min=-96,max=24,exp=false,div=0.1,default=-6,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeBelow",name="slopeBelow",min=-96,max=24,exp=false,div=0.1,default=0,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=2,id="slopeAbove",name="slopeAbove",min=-96,max=24,exp=false,div=0.1,default=-12,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
     {stage=2,id="clampTime",name="clampTime",min=0.001,max=1,exp=false,div=0.001,default=0.002,unit="s"},
     {stage=2,id="relaxTime",name="relaxTime",min=0.001,max=1,exp=false,div=0.001,default=0.01,unit="s"},
     -- color
@@ -129,8 +122,12 @@ function init()
     {stage=9,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=9,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=9,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- reverb
+    {stage=10,id="toggle",name="reverb",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=10,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=10,id="predelay",name="predelay",min=10,max=250,exp=false,div=5,default=60,formatter=function(param) return string.format("%d ms",util.round(param:get())) end},
     -- final
-    {stage=10,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or ""; return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=11,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
@@ -153,7 +150,7 @@ function init()
         engine.toggle(pram.stage,x)
         -- update the hiding/showing in the menu
         for stage=1,9 do
-          if params:get("toggle"..stage)==1 then 
+          if params:get("toggle"..stage)==1 then
             stages_toggled=stages_toggled+1
           end
           for _,p in ipairs(params_menu) do
@@ -175,7 +172,7 @@ function init()
 
   params:bang()
 
-  msg("TAPEDECK v2.0.0",30)
+  msg("TAPEDECK v2.1.0",30)
 
   clock.run(function()
     while true do
@@ -229,6 +226,10 @@ function ToRomanNumerals(s)
 end
 
 function key(k,z)
+  if not installer:ready() then
+    installer:key(k,z)
+    do return end
+  end
   if k>1 and z==1 then
     pcur=util.clamp(pcur+(k*2-5),1,#groups)
     msg(get_name(groups[pcur][1]))
@@ -236,7 +237,10 @@ function key(k,z)
 end
 
 function enc(k,d)
-  if k>1 and params:get_raw(groups[pcur][1])==0 then 
+  if not installer:ready() then
+    do return end
+  end
+  if k>1 and params:get_raw(groups[pcur][1])==0 then
     params:set(groups[pcur][1],1)
   end
   local id=groups[pcur][k]
@@ -245,10 +249,10 @@ function enc(k,d)
 end
 
 function get_name(id)
- local name=params.params[params.lookup[id]].name
+  local name=params.params[params.lookup[id]].name
   name=string.lower(name)
-  name=name:gsub('%>', '')
-  name=string.gsub(name, '^%s*(.-)%s*$', '%1')
+  name=name:gsub('%>','')
+  name=string.gsub(name,'^%s*(.-)%s*$','%1')
   return name
 end
 
@@ -276,12 +280,9 @@ function circle(x,y,r,l)
 end
 
 function redraw()
-  if Needs_Restart then
-    screen.clear()
-    screen.level(15)
-    Restart_Message:redraw()
-    screen.update()
-    return
+  if not installer:ready() then
+    installer:redraw()
+    do return end
   end
   screen.clear()
   screen.aa(1)
@@ -374,9 +375,8 @@ function redraw()
     screen.text_center(message)
   end
 
-
   screen.update()
-  
+
   for ii,i in ipairs({10,12,14,18,25,30,40,50,66}) do
     if ii-1<stages_toggled then
       screen.aa(1)
@@ -390,3 +390,4 @@ function redraw()
   end
   screen.update()
 end
+
