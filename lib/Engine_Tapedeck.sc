@@ -326,7 +326,7 @@ Engine_Tapedeck : CroneEngine {
 						// TODO add all the others here too
 					);
 				});
-				("[tapedeck] "++stageNames[sgrainstage]++" toggling "++synthName).postln;
+				("[tapedeck] "++stageNames[stage]++" toggling "++synthName).postln;
 				args.postln;
 				syns.at(stage).set(\mainenv,0);
 				syns.put(stage,Synth.after(syns.at(stage-1),synthName,args));
