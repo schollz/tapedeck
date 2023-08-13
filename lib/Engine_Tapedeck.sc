@@ -55,16 +55,17 @@ Engine_Tapedeck : CroneEngine {
 		stageNames = [
 			"preamp",		// 0
 			"filters",		// 1
-			"compression", 	// 2
-			"color",		// 3
-			"tape",			// 4
-			"distortion",	// 5
-			"wobble",		// 6
-			"chew",			// 7
-			"loss",			// 8
-			"degrade",		// 9
-			"reverb",		// 10
-			"final"			// 11
+			"grains", 		// 2
+			"compression", 	// 3
+			"color",		// 4
+			"tape",			// 5
+			"distortion",	// 6
+			"wobble",		// 7
+			"chew",			// 8
+			"loss",			// 9
+			"degrade",		// 10
+			"reverb",		// 11
+			"final"			// 12
 		];
 		stages=stageNames.size;
 		
@@ -106,6 +107,33 @@ Engine_Tapedeck : CroneEngine {
 			tascam_snd=BPeakEQ.ar(tascam_snd,7000,db:1);
 			tascam_snd=BLowPass.ar(tascam_snd,10000);
 			snd = (tascam*tascam_snd)+((1-tascam)*snd);
+			
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
+			Out.ar(out,snd);
+		}).send(context.server);
+		
+		SynthDef("grains", {
+			arg in,out,durscale=7;
+			var freq, dur;
+			var snd=In.ar(in,2);
+
+			freq = LFNoise2.kr(1/durscale).range(0.1,10);
+			dur = LFNoise2.kr(1/durscale).range(0.5,4);
+			snd = SelectX.ar(\grainwet.kr(0),[snd,
+				[GrainIn.ar(
+					numChannels: 1,
+					trigger: Impulse.kr(freq),
+					dur: dur/freq,
+					in: snd[0],
+					maxGrains: 64,
+				),GrainIn.ar(
+					numChannels: 1,
+					trigger: Impulse.kr(freq),
+					dur: dur/freq,
+					in: snd[1],
+					maxGrains: 64,
+				)]
+			]);
 			
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
