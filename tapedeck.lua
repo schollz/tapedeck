@@ -22,7 +22,7 @@ pcur=1
 groups={
   {"preamp0","preamp0","preamp0"},
   {"toggle1","hpf1","lpf1"},
-  {"toggle2","grainwet","durscale"}
+  {"toggle2","grainwet","durscale"},
   {"toggle3","thresh2","drive2"},
   {"toggle4","sine_drive_wet3","compress_curve_wet3"},
   {"toggle5","tape_bias4","drive4"},
