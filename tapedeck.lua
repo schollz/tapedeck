@@ -22,16 +22,16 @@ pcur=1
 groups={
   {"preamp0","preamp0","preamp0"},
   {"toggle1","hpf1","lpf1"},
-  {"toggle2","grainwet","durscale"},
-  {"toggle3","thresh2","drive2"},
-  {"toggle4","sine_drive_wet3","compress_curve_wet3"},
-  {"toggle5","tape_bias4","drive4"},
-  {"toggle6","drivegain5","dist_bias5"},
-  {"toggle7","wobble_amp6","flutter_amp6"},
-  {"toggle8","depth7","freq7"},
-  {"toggle9","gap8","speed8"},
-  {"toggle10","depth9","amount9"},
-  {"toggle11","wet10","predelay10"},
+  {"toggle2","grainwet2","durscale2"},
+  {"toggle3","thresh3","drive3"},
+  {"toggle4","sine_drive_wet4","compress_curve_wet4"},
+  {"toggle5","tape_bias5","drive5"},
+  {"toggle6","drivegain6","dist_bias6"},
+  {"toggle7","wobble_amp7","flutter_amp7"},
+  {"toggle8","depth8","freq8"},
+  {"toggle9","gap9","speed9"},
+  {"toggle10","depth10","amount10"},
+  {"toggle11","wet11","predelay11"},
   {"db12","db12","db12"},
 }
 stages_toggled=0
@@ -69,7 +69,7 @@ function init()
     -- granulation
     {stage=2,id="toggle",name="granulation",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=2,id="grainwet",name="wet",min=0,max=1,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=2,id="durscale",name="scale",min=0.1,max=30,exp=false,div=0.01,default=0,formatter=function(param) return string.format("%2.1f s",param:get()) end},
+    {stage=2,id="durscale",name="scale",min=0.1,max=30,exp=false,div=0.1,default=0,formatter=function(param) return string.format("%2.1f s",param:get()) end},
     -- compression
     {stage=3,id="toggle",name="compression",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=3,id="drive",name="drive",min=-12,max=64,exp=false,div=0.1,default=1,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
