@@ -64,8 +64,9 @@ Engine_Tapedeck : CroneEngine {
 			"chew",			// 8
 			"loss",			// 9
 			"degrade",		// 10
-			"reverb",		// 11
-			"final"			// 12
+			"shimmer",		// 11
+			"reverb",		// 12
+			"final"			// 13
 		];
 		stages=stageNames.size;
 		
@@ -254,6 +255,24 @@ Engine_Tapedeck : CroneEngine {
 				AnalogDegrade.ar(snd,\depth.kr(0.5),\amount.kr(0.5),\variance.kr(0.5),\envelope.kr(0.5))
 			]);
 			
+			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
+			Out.ar(out,snd);
+		}).send(context.server);
+
+		SynthDef("shimmer", {
+			arg in,out,shimmer=0;
+			var snd2;
+			var snd=In.ar(in,2);
+			
+			snd2 = DelayN.ar(snd, 0.03, 0.03);
+			snd2 = snd2 + PitchShift.ar(snd, 0.13, 2,0,1,1*shimmer/2);
+			snd2 = snd2 + PitchShift.ar(snd, 0.1, 4,0,1,0.5*shimmer/2);
+			snd2 = snd2 + PitchShift.ar(snd, 0.1, 8,0,1,0.125*shimmer/2);
+			snd = SelectX.ar(\wet.kr(0),[
+				snd,
+				snd2,
+			]);	
+
 			snd = snd * EnvGen.ar(Env.adsr(1,1,1,1),\mainenv.kr(1),doneAction:2);
 			Out.ar(out,snd);
 		}).send(context.server);

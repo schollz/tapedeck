@@ -4,7 +4,7 @@ live tape fx (saturation, distortion, wow/flutter).
 
 ![tapedeck](https://user-images.githubusercontent.com/6550035/149668537-202958bc-c680-4880-a8a2-d104cc9e15dd.png)
 
-this is a tape deck emulator - providing 13 ordered stages of effects: 
+this is a tape deck emulator - providing 14 ordered stages of effects: 
 
 1) preamp
 2) filtering / tascam emulation
@@ -17,8 +17,9 @@ this is a tape deck emulator - providing 13 ordered stages of effects:
 9) chew
 10) loss
 11) degradation
-12) reverb
-13) output amp
+12) shimmer
+13) reverb
+14) output amp
 
 this script is built off the shoulders of many extraordinary feats of ingenuity - this norns engine combines the incredible plugins ported by Mads Kjeldgaard (@madskjeldgaard) ([portedplugins](https://github.com/madskjeldgaard/portedplugins)) which are ported from [Jatin Chowdhury's ChowDSP-VCV-rack project](https://github.com/jatinchowdhury18/ChowDSP-VCV). the key here is Jatin Chowdhury's [open-source code for physical modeling of tape machines](https://github.com/jatinchowdhury18/AnalogTapeModel), which is beautifully detailed [in this paper](dafx2019.bcu.ac.uk/papers/DAFx2019_paper_3.pdf). the reverb is an implementation from [jpcima](https://github.com/jpcima/fverb) of Jon Dattorro's stereo variant of the reverberator ([Journal of the Audio Engineering Society, 1997](https://ccrma.stanford.edu/~dattorro/EffectDesignPart1.pdf)).
 

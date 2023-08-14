@@ -31,8 +31,9 @@ groups={
   {"toggle8","depth8","freq8"},
   {"toggle9","gap9","speed9"},
   {"toggle10","depth10","amount10"},
-  {"toggle11","wet11","predelay11"},
-  {"db12","db12","db12"},
+  {"toggle11","wet11","shimmer11"},
+  {"toggle12","wet12","predelay12"},
+  {"db13","db13","db13"},
 }
 stages_toggled=0
 
@@ -127,12 +128,16 @@ function init()
     {stage=10,id="depth",name="depth",min=0,max=1,exp=false,div=0.01,default=0.2,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=10,id="amount",name="amount",min=0,max=1,exp=false,div=0.01,default=0.5,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
     {stage=10,id="variance",name="variance",min=0,max=1,exp=false,div=0.01,default=0.1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    -- reverb
-    {stage=11,id="toggle",name="reverb",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    -- shimmer
+    {stage=11,id="toggle",name="shimmer",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
     {stage=11,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
-    {stage=11,id="predelay",name="predelay",min=10,max=250,exp=false,div=5,default=60,formatter=function(param) return string.format("%d ms",util.round(param:get())) end},
+    {stage=11,id="shimmer",name="shimmer",min=0,max=2,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    -- reverb
+    {stage=12,id="toggle",name="reverb",min=0,max=1,exp=false,div=1,default=0,response=1,formatter=function(param) return param:get()==1 and "ON" or "OFF" end},
+    {stage=12,id="wet",name="wet",min=0,max=1,exp=false,div=0.01,default=1,formatter=function(param) return string.format("%d%%",util.round(100*param:get())) end},
+    {stage=12,id="predelay",name="predelay",min=10,max=250,exp=false,div=5,default=60,formatter=function(param) return string.format("%d ms",util.round(param:get())) end},
     -- final
-    {stage=12,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
+    {stage=13,id="db",name="final",min=-96,max=16,exp=false,div=0.1,default=0,response=1,formatter=function(param) local v=param:get()>0 and "+" or "";return string.format("%s%2.1f dB",v,param:get()) end},
   }
   for _,pram in ipairs(params_menu) do
     local id=pram.id..pram.stage
